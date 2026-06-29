@@ -25,6 +25,8 @@ export default function BillPill({ bill, paid, monthLabel, onTogglePaid }: Props
 
   function handleClick() {
     if (paid) {
+      // Tapping a paid pill un-marks it immediately (undo a mistake) without
+      // the confirmation step — only marking-as-paid needs the safety check.
       onTogglePaid(bill.id, false);
       return;
     }
@@ -50,7 +52,7 @@ export default function BillPill({ bill, paid, monthLabel, onTogglePaid }: Props
           </span>
         </button>
         {bill.pay_url && (
-          
+          <a
             href={bill.pay_url}
             target="_blank"
             rel="noopener noreferrer"
