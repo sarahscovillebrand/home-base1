@@ -36,32 +36,44 @@ export default function BillPill({ bill, paid, monthLabel, onTogglePaid }: Props
   return (
     <>
       <div className="flex items-center gap-2">
-        <button
-          type="button"
-          onClick={handleClick}
-          disabled={saving}
-          className="flex flex-1 items-center justify-between gap-3 rounded-pill px-4 py-3 text-left transition-colors"
+        <div
+          className="flex flex-1 items-center justify-between gap-3 rounded-pill px-4 py-3"
           style={{
-            background: paid ? "#D5F2E3" : "#DCEAFE",
-            color: paid ? "#15803D" : "#1D4ED8",
+            background: paid ? "#EAF2C2" : "#EDEBFB",
+            color: paid ? "#7C8A1E" : "#5B53D6",
           }}
         >
           <span className="font-medium">{bill.name}</span>
           <span className="text-sm opacity-80">
             {formatMoney(bill.amount)} · due {ordinal(bill.due_day)}
           </span>
-        </button>
+        </div>
         {bill.pay_url && (
           <a
             href={bill.pay_url}
             target="_blank"
             rel="noopener noreferrer"
             aria-label={`Go pay ${bill.name}`}
-            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border border-gray-200 bg-white text-base text-blue-600"
+            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border text-base"
+            style={{ borderColor: "#DEF453", color: "#5B53D6" }}
           >
             ↗
           </a>
         )}
+        <button
+          type="button"
+          onClick={handleClick}
+          disabled={saving}
+          aria-label={paid ? `Mark ${bill.name} unpaid` : `Mark ${bill.name} paid`}
+          className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border text-base transition-colors"
+          style={{
+            borderColor: "#DEF453",
+            background: paid ? "#7C8A1E" : "#FFFFFF",
+            color: paid ? "#FFFFFF" : "#9D96EE",
+          }}
+        >
+          {paid ? "✓" : "○"}
+        </button>
       </div>
       {showModal && (
         <ConfirmModal

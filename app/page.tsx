@@ -71,7 +71,7 @@ export default function Dashboard() {
 
   return (
     <main>
-      <h1 className="text-xl font-semibold text-gray-900">Home Base</h1>
+      <h1 className="wordmark text-2xl">Homebase</h1>
       <p className="text-sm text-gray-400">Pay period starting {periodLabel}</p>
 
       <div className="mt-4">

@@ -6,7 +6,7 @@ export default function StatusHero({ settings }: { settings: Settings }) {
   const okay = isOkayThisPaycheck(settings);
 
   return (
-    <div className="card">
+    <div className="card-hero">
       <p className="text-sm text-gray-500">Checking buffer</p>
       <p className="mt-1 text-3xl font-semibold text-gray-900">
         {formatMoney(settings.checking_balance)}
