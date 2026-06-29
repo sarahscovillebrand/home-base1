@@ -25,8 +25,6 @@ export default function BillPill({ bill, paid, monthLabel, onTogglePaid }: Props
 
   function handleClick() {
     if (paid) {
-      // Tapping a paid pill un-marks it immediately (undo a mistake) without
-      // the confirmation step — only marking-as-paid needs the safety check.
       onTogglePaid(bill.id, false);
       return;
     }
@@ -35,21 +33,34 @@ export default function BillPill({ bill, paid, monthLabel, onTogglePaid }: Props
 
   return (
     <>
-      <button
-        type="button"
-        onClick={handleClick}
-        disabled={saving}
-        className="flex items-center justify-between gap-3 rounded-pill px-4 py-3 text-left transition-colors"
-        style={{
-          background: paid ? "#D5F2E3" : "#DCEAFE",
-          color: paid ? "#15803D" : "#1D4ED8",
-        }}
-      >
-        <span className="font-medium">{bill.name}</span>
-        <span className="text-sm opacity-80">
-          {formatMoney(bill.amount)} · due {ordinal(bill.due_day)}
-        </span>
-      </button>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={handleClick}
+          disabled={saving}
+          className="flex flex-1 items-center justify-between gap-3 rounded-pill px-4 py-3 text-left transition-colors"
+          style={{
+            background: paid ? "#D5F2E3" : "#DCEAFE",
+            color: paid ? "#15803D" : "#1D4ED8",
+          }}
+        >
+          <span className="font-medium">{bill.name}</span>
+          <span className="text-sm opacity-80">
+            {formatMoney(bill.amount)} · due {ordinal(bill.due_day)}
+          </span>
+        </button>
+        {bill.pay_url && (
+          
+            href={bill.pay_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={`Go pay ${bill.name}`}
+            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border border-gray-200 bg-white text-base text-blue-600"
+          >
+            ↗
+          </a>
+        )}
+      </div>
       {showModal && (
         <ConfirmModal
           billName={bill.name}

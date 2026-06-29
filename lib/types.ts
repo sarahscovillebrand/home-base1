@@ -22,6 +22,7 @@ export type Bill = {
   paycheck_letter: "A" | "B";
   tappable: boolean;
   sort_order: number;
+  pay_url: string | null;
 };
 
 export type BillPayment = {
