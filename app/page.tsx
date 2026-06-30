@@ -131,7 +131,7 @@ function DashboardInner({ name, user }: { name: string; user: User }) {
         style={{
           maxWidth: 480,
           margin: "0 auto",
-          paddingTop: "max(52px, env(safe-area-inset-top))",
+          paddingTop: "calc(env(safe-area-inset-top) + 12px)",
         }}
       >
         <main className="pb-28 px-4">
@@ -154,8 +154,8 @@ function DashboardInner({ name, user }: { name: string; user: User }) {
                 <HomeIconSVG size={20} />
               </div>
               <div>
-                <h1 className="wordmark" style={{ fontSize: 24, lineHeight: 1, color: "#1E1830" }}>
-                  Home Base
+                <h1 className="wordmark" style={{ fontSize: 30, lineHeight: 1, color: "#1E1830" }}>
+                  HomeBase
                 </h1>
                 <p style={{ fontSize: 13, fontWeight: 600, color: "#8070C0", marginTop: 2 }}>
                   Hello, {name}

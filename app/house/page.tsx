@@ -351,7 +351,7 @@ function HouseInner({ user }: { user: User }) {
       <div style={{
         background: "#E8849A",
         borderRadius: "0 0 40px 40px",
-        paddingTop: "max(52px, env(safe-area-inset-top))",
+        paddingTop: "calc(env(safe-area-inset-top) + 12px)",
         paddingBottom: 28,
         paddingLeft: 22,
         paddingRight: 22,

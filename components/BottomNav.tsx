@@ -86,7 +86,7 @@ export default function BottomNav() {
         paddingTop: 10,
         paddingLeft: 6,
         paddingRight: 6,
-        paddingBottom: "max(28px, env(safe-area-inset-bottom))",
+        paddingBottom: "calc(env(safe-area-inset-bottom) + 8px)",
         boxShadow: "0 -1px 0 rgba(0,0,0,0.06)",
       }}
     >
