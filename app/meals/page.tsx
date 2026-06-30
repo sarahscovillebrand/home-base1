@@ -8,7 +8,7 @@ import NotificationBell from "@/components/NotificationBell";
 import type { User } from "@supabase/supabase-js";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-type Meal = { id: string; name: string; created_at: string };
+type Meal = { id: string; name: string; instructions: string | null; created_at: string };
 type Ingredient = { id: string; meal_id: string; name: string; sort_order: number };
 type MealPlan = { id: string; week_start: string; day_of_week: number; meal_id: string | null };
 type GroceryCheck = { id: string; week_start: string; ingredient_name: string };
@@ -88,6 +88,7 @@ function BottomSheet({ onClose, children }: { onClose: () => void; children: Rea
 function AddMealSheet({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
   const [name, setName] = useState("");
   const [ingredientsText, setIngredientsText] = useState("");
+  const [instructions, setInstructions] = useState("");
   const [saving, setSaving] = useState(false);
   const nameRef = useRef<HTMLInputElement>(null);
   useEffect(() => { setTimeout(() => nameRef.current?.focus(), 80); }, []);
@@ -96,7 +97,10 @@ function AddMealSheet({ onClose, onSaved }: { onClose: () => void; onSaved: () =
     const trimName = name.trim();
     if (!trimName) return;
     setSaving(true);
-    const { data: meal, error } = await supabase.from("meals").insert({ name: trimName }).select().single();
+    const { data: meal, error } = await supabase.from("meals").insert({
+      name: trimName,
+      instructions: instructions.trim() || null,
+    }).select().single();
     if (!error && meal) {
       const lines = ingredientsText.split("\n").map((l: string) => l.trim()).filter(Boolean);
       if (lines.length > 0) {
@@ -110,24 +114,32 @@ function AddMealSheet({ onClose, onSaved }: { onClose: () => void; onSaved: () =
     onClose();
   }
 
+  const labelStyle: React.CSSProperties = { fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#1C2010", opacity: 0.4, marginTop: 4 };
+  const inputBase: React.CSSProperties = { background: "#F4F7F0", border: "none", borderRadius: 14, padding: "13px 15px", fontSize: 14, fontWeight: 600, color: "#1C2010", outline: "none", width: "100%", resize: "none" as const, lineHeight: 1.6 };
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#1C2010", opacity: 0.4 }}>Meal name</p>
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <p style={{ ...labelStyle, marginTop: 0 }}>Meal name</p>
       <input
         ref={nameRef} value={name} onChange={e => setName(e.target.value)}
-        placeholder="e.g. Taco Night"
-        style={{ background: "#F4F7F0", border: "none", borderRadius: 14, padding: "13px 15px", fontSize: 15, fontWeight: 600, color: "#1C2010", outline: "none", width: "100%" }}
+        placeholder="e.g. Ground Beef Tacos"
+        style={{ ...inputBase, fontSize: 15 }}
       />
-      <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#1C2010", opacity: 0.4, marginTop: 4 }}>
-        Ingredients (one per line)
-      </p>
+      <p style={labelStyle}>Ingredients (one per line)</p>
       <textarea
         value={ingredientsText} onChange={e => setIngredientsText(e.target.value)}
-        placeholder={"chicken thighs\ntortillas\nsalsa\nshredded cheese\nlime"}
-        rows={6}
-        style={{ background: "#F4F7F0", border: "none", borderRadius: 14, padding: "13px 15px", fontSize: 14, fontWeight: 600, color: "#1C2010", outline: "none", width: "100%", resize: "none", lineHeight: 1.6 }}
+        placeholder={"ground beef\ntaco shells\nshredded cheese\nsalsa\nlime"}
+        rows={5}
+        style={inputBase}
       />
-      <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
+      <p style={labelStyle}>Instructions (optional)</p>
+      <textarea
+        value={instructions} onChange={e => setInstructions(e.target.value)}
+        placeholder={"Brown the beef with taco seasoning. Warm shells in oven at 350° for 5 min. Assemble and serve."}
+        rows={4}
+        style={inputBase}
+      />
+      <div style={{ display: "flex", gap: 10, marginTop: 6 }}>
         <button type="button" onClick={onClose} style={{ flex: 1, background: "#F0EFF8", color: "#8070C0", border: "none", borderRadius: 999, padding: "13px 0", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
           Cancel
         </button>
@@ -135,6 +147,41 @@ function AddMealSheet({ onClose, onSaved }: { onClose: () => void; onSaved: () =
           {saving ? "Saving…" : "Save Meal"}
         </button>
       </div>
+    </div>
+  );
+}
+
+// ─── Meal Detail Sheet ────────────────────────────────────────────────────────
+function MealDetailSheet({ meal, ingredients, onClose }: { meal: Meal; ingredients: Ingredient[]; onClose: () => void }) {
+  const sectionLabel: React.CSSProperties = { fontSize: 9, fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", color: "#1C2010", opacity: 0.4, marginBottom: 8, marginTop: 16 };
+  return (
+    <div>
+      <p style={{ fontSize: 22, fontWeight: 900, color: "#1C2010", marginBottom: 4 }}>{meal.name}</p>
+      {meal.instructions && (
+        <>
+          <p style={sectionLabel}>How to make it</p>
+          <p style={{ fontSize: 14, fontWeight: 600, color: "#1C2010", lineHeight: 1.65 }}>{meal.instructions}</p>
+        </>
+      )}
+      {ingredients.length > 0 && (
+        <>
+          <p style={sectionLabel}>Ingredients</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            {ingredients.map(ing => (
+              <div key={ing.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#5E8B47", flexShrink: 0 }} />
+                <p style={{ fontSize: 14, fontWeight: 600, color: "#5E8B47" }}>{ing.name}</p>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+      {!meal.instructions && ingredients.length === 0 && (
+        <p style={{ fontSize: 14, color: "#8BA870", fontWeight: 600, marginTop: 12 }}>No instructions or ingredients added yet.</p>
+      )}
+      <button type="button" onClick={onClose} style={{ width: "100%", marginTop: 24, background: "#E4EDDA", color: "#5E8B47", border: "none", borderRadius: 999, padding: "13px 0", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
+        Done
+      </button>
     </div>
   );
 }
@@ -181,6 +228,7 @@ function PlanTab({ weekStart, plans, meals, ingredients, onAssign, onRemove, onD
 }) {
   const [pickerDay, setPickerDay] = useState<typeof PLAN_DAYS[0] | null>(null);
   const [showAddNew, setShowAddNew] = useState(false);
+  const [detailMeal, setDetailMeal] = useState<Meal | null>(null);
   const planMap = new Map(plans.map(p => [p.day_of_week, p]));
   const mealMap = new Map(meals.map(m => [m.id, m]));
 
@@ -199,14 +247,12 @@ function PlanTab({ weekStart, plans, meals, ingredients, onAssign, onRemove, onD
                 </div>
                 {meal ? (
                   <>
-                    <div style={{ flex: 1, minWidth: 0 }}>
+                    <button type="button" onClick={() => setDetailMeal(meal)} style={{ flex: 1, minWidth: 0, textAlign: "left", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
                       <p style={{ fontSize: 15, fontWeight: 700, color: "#1C2010" }}>{meal.name}</p>
-                      {mealIngredients.length > 0 && (
-                        <p style={{ fontSize: 11, fontWeight: 600, color: "#8BA870", marginTop: 2 }}>
-                          {mealIngredients.length} ingredient{mealIngredients.length !== 1 ? "s" : ""}
-                        </p>
-                      )}
-                    </div>
+                      <p style={{ fontSize: 11, fontWeight: 600, color: "#8BA870", marginTop: 2 }}>
+                        {meal.instructions ? "Tap for instructions" : mealIngredients.length > 0 ? `${mealIngredients.length} ingredient${mealIngredients.length !== 1 ? "s" : ""}` : "Tap for details"}
+                      </p>
+                    </button>
                     <button type="button" onClick={() => onRemove(day.dow)} style={{ width: 28, height: 28, borderRadius: "50%", background: "#F4F7F0", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                       <XIcon size={12} color="#8BA870" />
                     </button>
@@ -242,6 +288,15 @@ function PlanTab({ weekStart, plans, meals, ingredients, onAssign, onRemove, onD
             onPick={async (mealId) => { await onAssign(pickerDay.dow, mealId); setPickerDay(null); }}
             onClose={() => setPickerDay(null)}
             onAddNew={() => setShowAddNew(true)}
+          />
+        </BottomSheet>
+      )}
+      {detailMeal && (
+        <BottomSheet onClose={() => setDetailMeal(null)}>
+          <MealDetailSheet
+            meal={detailMeal}
+            ingredients={ingredients.filter(i => i.meal_id === detailMeal.id).sort((a, b) => a.sort_order - b.sort_order)}
+            onClose={() => setDetailMeal(null)}
           />
         </BottomSheet>
       )}
@@ -370,11 +425,22 @@ function MenuTab({ meals, ingredients, onDataRefresh }: {
                   </div>
                 </div>
               </button>
-              {isExpanded && mealIngredients.length > 0 && (
-                <div style={{ borderTop: "1px solid rgba(94,139,71,0.1)", padding: "10px 16px 14px" }}>
-                  {mealIngredients.map(ing => (
-                    <p key={ing.id} style={{ fontSize: 13, fontWeight: 600, color: "#5E8B47", lineHeight: 1.8 }}>· {ing.name}</p>
-                  ))}
+              {isExpanded && (meal.instructions || mealIngredients.length > 0) && (
+                <div style={{ borderTop: "1px solid rgba(94,139,71,0.1)", padding: "12px 16px 16px", display: "flex", flexDirection: "column", gap: 12 }}>
+                  {meal.instructions && (
+                    <div>
+                      <p style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", color: "#1C2010", opacity: 0.4, marginBottom: 6 }}>How to make it</p>
+                      <p style={{ fontSize: 13, fontWeight: 600, color: "#1C2010", lineHeight: 1.65 }}>{meal.instructions}</p>
+                    </div>
+                  )}
+                  {mealIngredients.length > 0 && (
+                    <div>
+                      <p style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", color: "#1C2010", opacity: 0.4, marginBottom: 6 }}>Ingredients</p>
+                      {mealIngredients.map(ing => (
+                        <p key={ing.id} style={{ fontSize: 13, fontWeight: 600, color: "#5E8B47", lineHeight: 1.8 }}>· {ing.name}</p>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -472,11 +538,11 @@ function MealsInner({ user }: { user: User }) {
           <NotificationBell userEmail={user.email!} />
         </div>
         <div style={{ display: "flex", gap: 10 }}>
-          <div style={{ flex: 1, background: "rgba(255,255,255,0.25)", borderRadius: 18, padding: "11px 15px" }}>
+          <div style={{ flex: 1, background: "rgba(255,255,255,0.25)", borderRadius: 999, padding: "11px 15px" }}>
             <p style={{ fontSize: 15, fontWeight: 900, color: "#FFFFFF", lineHeight: 1 }}>{plannedCount} / 5</p>
             <p style={{ fontSize: 10, fontWeight: 600, color: "#D4EDBE", opacity: 0.85, marginTop: 2 }}>dinners planned</p>
           </div>
-          <div style={{ flex: 1, background: "rgba(255,255,255,0.25)", borderRadius: 18, padding: "11px 15px" }}>
+          <div style={{ flex: 1, background: "rgba(255,255,255,0.25)", borderRadius: 999, padding: "11px 15px" }}>
             <p style={{ fontSize: 15, fontWeight: 900, color: "#FFFFFF", lineHeight: 1 }}>{meals.length}</p>
             <p style={{ fontSize: 10, fontWeight: 600, color: "#D4EDBE", opacity: 0.85, marginTop: 2 }}>meals in menu</p>
           </div>

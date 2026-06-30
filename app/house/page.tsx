@@ -435,7 +435,7 @@ function HouseInner({ user }: { user: User }) {
         {/* Stat pills */}
         <div style={{ display: "flex", gap: 10 }}>
           <div style={{
-            flex: 1, background: "rgba(255,255,255,0.4)", borderRadius: 18,
+            flex: 1, background: "rgba(255,255,255,0.4)", borderRadius: 999,
             padding: "11px 15px", display: "flex", alignItems: "center", gap: 10,
           }}>
             <span style={{ fontSize: 22 }}>{weather?.icon ?? "☀️"}</span>
@@ -449,7 +449,7 @@ function HouseInner({ user }: { user: User }) {
             </div>
           </div>
           <div style={{
-            flex: 1, background: "rgba(255,255,255,0.4)", borderRadius: 18,
+            flex: 1, background: "rgba(255,255,255,0.4)", borderRadius: 999,
             padding: "11px 15px", display: "flex", alignItems: "center", gap: 10,
           }}>
             <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#F0D020", flexShrink: 0 }} />
