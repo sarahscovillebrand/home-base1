@@ -242,34 +242,44 @@ function AddMealSheet({ onClose, onSaved }: { onClose: () => void; onSaved: () =
 
 // ─── Meal Detail Sheet ────────────────────────────────────────────────────────
 function MealDetailSheet({ meal, ingredients, onClose }: { meal: Meal; ingredients: Ingredient[]; onClose: () => void }) {
-  const sectionLabel: React.CSSProperties = { fontSize: 9, fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", color: "#1C2010", opacity: 0.4, marginBottom: 8, marginTop: 16 };
+  const [activeTab, setActiveTab] = React.useState<"instructions" | "ingredients">("instructions");
   return (
     <div>
       <p style={{ fontSize: 22, fontWeight: 900, color: "#1C2010", marginBottom: 2 }}>{meal.name}</p>
       {meal.side_dish && (
-        <p style={{ fontSize: 13, fontWeight: 600, color: "#8BA870", marginBottom: 4 }}>with {meal.side_dish}</p>
+        <p style={{ fontSize: 13, fontWeight: 600, color: "#8BA870", marginBottom: 14 }}>with {meal.side_dish}</p>
       )}
-      {meal.instructions && (
-        <>
-          <p style={sectionLabel}>How to make it</p>
-          <p style={{ fontSize: 14, fontWeight: 600, color: "#1C2010", lineHeight: 1.65 }}>{meal.instructions}</p>
-        </>
-      )}
-      {ingredients.length > 0 && (
-        <>
-          <p style={sectionLabel}>Ingredients</p>
-          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            {ingredients.map(ing => (
-              <div key={ing.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#5E8B47", flexShrink: 0 }} />
-                <p style={{ fontSize: 14, fontWeight: 600, color: "#5E8B47" }}>{ing.name}</p>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
-      {!meal.instructions && ingredients.length === 0 && (
-        <p style={{ fontSize: 14, color: "#8BA870", fontWeight: 600, marginTop: 12 }}>No instructions or ingredients added yet.</p>
+      {/* Pill tabs */}
+      <div style={{ display: "flex", gap: 6, background: "#F4F7F0", borderRadius: 999, padding: 3, marginBottom: 16 }}>
+        {(["instructions", "ingredients"] as const).map(tab => {
+          const active = activeTab === tab;
+          return (
+            <button key={tab} type="button" onClick={() => setActiveTab(tab)}
+              style={{ flex: 1, padding: "8px 0", borderRadius: 999, border: "none", cursor: "pointer",
+                background: active ? "#5E8B47" : "transparent",
+                color: active ? "#FFFFFF" : "#8BA870",
+                fontSize: 13, fontWeight: 700, textTransform: "capitalize", transition: "all 0.15s" }}>
+              {tab}
+            </button>
+          );
+        })}
+      </div>
+      {/* Tab content */}
+      {activeTab === "instructions" ? (
+        meal.instructions
+          ? <p style={{ fontSize: 14, fontWeight: 600, color: "#1C2010", lineHeight: 1.7 }}>{meal.instructions}</p>
+          : <p style={{ fontSize: 14, fontWeight: 600, color: "#8BA870" }}>No instructions added yet.</p>
+      ) : (
+        ingredients.length > 0
+          ? <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {ingredients.map(ing => (
+                <div key={ing.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#5E8B47", flexShrink: 0 }} />
+                  <p style={{ fontSize: 14, fontWeight: 600, color: "#5E8B47" }}>{ing.name}</p>
+                </div>
+              ))}
+            </div>
+          : <p style={{ fontSize: 14, fontWeight: 600, color: "#8BA870" }}>No ingredients added yet.</p>
       )}
       <button type="button" onClick={onClose} style={{ width: "100%", marginTop: 24, background: "#E4EDDA", color: "#5E8B47", border: "none", borderRadius: 999, padding: "13px 0", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
         Done
@@ -477,6 +487,7 @@ function MenuTab({ meals, ingredients, onDataRefresh }: {
 }) {
   const [showAdd, setShowAdd] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [expandedTab, setExpandedTab] = useState<Record<string, "instructions" | "ingredients">>({});
   const [importing, setImporting] = useState(false);
   const [importToast, setImportToast] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -560,7 +571,14 @@ function MenuTab({ meals, ingredients, onDataRefresh }: {
           const isExpanded = expanded === meal.id;
           return (
             <div key={meal.id} style={{ background: "#FFFFFF", borderRadius: 28 }}>
-              <button type="button" onClick={() => setExpanded(isExpanded ? null : meal.id)}
+              <button type="button" onClick={() => {
+                  if (isExpanded) {
+                    setExpanded(null);
+                  } else {
+                    setExpanded(meal.id);
+                    setExpandedTab(prev => ({ ...prev, [meal.id]: prev[meal.id] ?? "instructions" }));
+                  }
+                }}
                 style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "15px 16px", background: "none", border: "none", cursor: "pointer" }}>
                 <div style={{ textAlign: "left" }}>
                   <p style={{ fontSize: 15, fontWeight: 700, color: "#1C2010" }}>{meal.name}</p>
@@ -578,21 +596,35 @@ function MenuTab({ meals, ingredients, onDataRefresh }: {
                   </div>
                 </div>
               </button>
-              {isExpanded && (meal.instructions || mealIngredients.length > 0) && (
-                <div style={{ borderTop: "1px solid rgba(94,139,71,0.1)", padding: "12px 16px 16px", display: "flex", flexDirection: "column", gap: 12 }}>
-                  {meal.instructions && (
-                    <div>
-                      <p style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", color: "#1C2010", opacity: 0.4, marginBottom: 6 }}>How to make it</p>
-                      <p style={{ fontSize: 13, fontWeight: 600, color: "#1C2010", lineHeight: 1.65 }}>{meal.instructions}</p>
-                    </div>
-                  )}
-                  {mealIngredients.length > 0 && (
-                    <div>
-                      <p style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", color: "#1C2010", opacity: 0.4, marginBottom: 6 }}>Ingredients</p>
-                      {mealIngredients.map(ing => (
-                        <p key={ing.id} style={{ fontSize: 13, fontWeight: 600, color: "#5E8B47", lineHeight: 1.8 }}>· {ing.name}</p>
-                      ))}
-                    </div>
+              {isExpanded && (
+                <div style={{ borderTop: "1px solid rgba(94,139,71,0.1)", padding: "12px 14px 16px" }}>
+                  {/* Tab switcher */}
+                  <div style={{ display: "flex", gap: 6, background: "#F4F7F0", borderRadius: 999, padding: 3, marginBottom: 14 }}>
+                    {(["instructions", "ingredients"] as const).map(tab => {
+                      const active = (expandedTab[meal.id] ?? "instructions") === tab;
+                      return (
+                        <button key={tab} type="button"
+                          onClick={e => { e.stopPropagation(); setExpandedTab(prev => ({ ...prev, [meal.id]: tab })); }}
+                          style={{ flex: 1, padding: "7px 0", borderRadius: 999, border: "none", cursor: "pointer",
+                            background: active ? "#5E8B47" : "transparent",
+                            color: active ? "#FFFFFF" : "#8BA870",
+                            fontSize: 12, fontWeight: 700, textTransform: "capitalize", transition: "all 0.15s" }}>
+                          {tab}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {/* Tab content */}
+                  {(expandedTab[meal.id] ?? "instructions") === "instructions" ? (
+                    meal.instructions
+                      ? <p style={{ fontSize: 13, fontWeight: 600, color: "#1C2010", lineHeight: 1.7 }}>{meal.instructions}</p>
+                      : <p style={{ fontSize: 13, fontWeight: 600, color: "#8BA870" }}>No instructions added yet.</p>
+                  ) : (
+                    mealIngredients.length > 0
+                      ? mealIngredients.map(ing => (
+                          <p key={ing.id} style={{ fontSize: 13, fontWeight: 600, color: "#5E8B47", lineHeight: 1.9 }}>· {ing.name}</p>
+                        ))
+                      : <p style={{ fontSize: 13, fontWeight: 600, color: "#8BA870" }}>No ingredients added yet.</p>
                   )}
                 </div>
               )}
