@@ -15,7 +15,8 @@ type Props = {
 export default function PaycheckCard({ settings, bills, payments, monthLabel, onTogglePaid }: Props) {
   const letter = getCurrentPaycheckLetter();
   const label = letter === "A" ? "Home Base" : "Operations";
-  const tappable = bills.filter((b) => b.tappable && b.paycheck_letter === letter);
+  // Show all bills for this paycheck — tappable ones get check circle, others show "autopay"
+  const paycheckBills = bills.filter((b) => b.paycheck_letter === letter);
   const paidMap = new Map(payments.map((p) => [p.bill_id, p.paid]));
 
   return (
@@ -46,10 +47,10 @@ export default function PaycheckCard({ settings, bills, payments, monthLabel, on
       </p>
 
       <div className="mt-4 flex flex-col gap-2">
-        {tappable.length === 0 ? (
-          <p className="text-sm" style={{ color: "#302070", opacity: 0.5 }}>No tap-to-confirm bills on this paycheck.</p>
+        {paycheckBills.length === 0 ? (
+          <p className="text-sm" style={{ color: "#302070", opacity: 0.5 }}>No bills on this paycheck.</p>
         ) : (
-          tappable.map((bill) => (
+          paycheckBills.map((bill) => (
             <BillPill
               key={bill.id}
               bill={bill}
@@ -60,9 +61,6 @@ export default function PaycheckCard({ settings, bills, payments, monthLabel, on
           ))
         )}
       </div>
-      <p className="mt-3 text-xs font-semibold" style={{ color: "#302070", opacity: 0.4 }}>
-        Internet, Amazon Prime, Apple Storage, Business Software, and Renter&apos;s Insurance autopay — already counted in the committed total above.
-      </p>
     </div>
   );
 }

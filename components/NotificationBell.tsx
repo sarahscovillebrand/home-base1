@@ -13,6 +13,46 @@ type Notif = {
   read_by: string[];
 };
 
+function BellIcon({ size = 18 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
+      <path d="M13.73 21a2 2 0 01-3.46 0" />
+    </svg>
+  );
+}
+
+function actionIcon(action: string) {
+  if (action === "task_done") return (
+    <div style={{ width: 24, height: 24, borderRadius: "50%", background: "#E8F5E9", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#2E7D32" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="20 6 9 17 4 12" />
+      </svg>
+    </div>
+  );
+  if (action === "task_unchecked" || action === "marked_unpaid") return (
+    <div style={{ width: 24, height: 24, borderRadius: "50%", background: "#FFF3E0", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#E65100" strokeWidth="3" strokeLinecap="round">
+        <path d="M9 14l-4-4 4-4" />
+        <path d="M5 10h11a4 4 0 010 8h-1" />
+      </svg>
+    </div>
+  );
+  if (action === "marked_paid") return (
+    <div style={{ width: 24, height: 24, borderRadius: "50%", background: "#E8EAF6", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#3949AB" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="20 6 9 17 4 12" />
+      </svg>
+    </div>
+  );
+  return (
+    <div style={{ width: 24, height: 24, borderRadius: "50%", background: "#F3E5F5", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <BellIcon size={11} />
+    </div>
+  );
+}
+
 export default function NotificationBell({ userEmail }: { userEmail: string }) {
   const [notifs, setNotifs] = useState<Notif[]>([]);
   const [open, setOpen] = useState(false);
@@ -27,14 +67,12 @@ export default function NotificationBell({ userEmail }: { userEmail: string }) {
     setNotifs(data ?? []);
   }
 
-  // Poll every 30 seconds for new notifications
   useEffect(() => {
     load();
     const interval = setInterval(load, 30_000);
     return () => clearInterval(interval);
   }, []);
 
-  // Close panel when clicking outside
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
@@ -50,7 +88,6 @@ export default function NotificationBell({ userEmail }: { userEmail: string }) {
   async function handleOpen() {
     setOpen((v) => !v);
     if (!open && unread.length > 0) {
-      // Mark all as read for this user
       const ids = unread.map((n) => n.id);
       for (const id of ids) {
         const notif = notifs.find((n) => n.id === id)!;
@@ -59,7 +96,6 @@ export default function NotificationBell({ userEmail }: { userEmail: string }) {
           .update({ read_by: [...notif.read_by, userEmail] })
           .eq("id", id);
       }
-      // Optimistically update local state
       setNotifs((prev) =>
         prev.map((n) =>
           ids.includes(n.id) ? { ...n, read_by: [...n.read_by, userEmail] } : n
@@ -83,13 +119,13 @@ export default function NotificationBell({ userEmail }: { userEmail: string }) {
         onClick={handleOpen}
         aria-label="Notifications"
         className="relative flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full"
-        style={{ background: "#FFFFFF", border: "0.5px solid #EBEBEB" }}
+        style={{ background: "#FFFFFF", border: "0.5px solid #EBEBEB", color: "#8070C0" }}
       >
-        🔔
+        <BellIcon size={18} />
         {unread.length > 0 && (
           <span
-            className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-extrabold text-white"
-            style={{ background: "#E86060", fontSize: 9 }}
+            className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full text-white"
+            style={{ background: "#E86060", fontSize: 9, fontWeight: 800 }}
           >
             {unread.length > 9 ? "9+" : unread.length}
           </span>
@@ -112,9 +148,7 @@ export default function NotificationBell({ userEmail }: { userEmail: string }) {
 
           {notifs.length === 0 ? (
             <div className="px-4 py-6 text-center">
-              <p className="text-sm font-semibold" style={{ color: "#C8C4D8" }}>
-                Nothing yet
-              </p>
+              <p className="text-sm font-semibold" style={{ color: "#C8C4D8" }}>Nothing yet</p>
             </div>
           ) : (
             <div className="max-h-80 overflow-y-auto">
@@ -129,13 +163,7 @@ export default function NotificationBell({ userEmail }: { userEmail: string }) {
                       borderBottom: "1px solid #F5F5F5",
                     }}
                   >
-                    <span className="mt-0.5 text-base">
-                      {n.action === "marked_paid" ? "✅"
-                        : n.action === "marked_unpaid" ? "↩️"
-                        : n.action === "task_done" ? "🧹"
-                        : n.action === "task_unchecked" ? "↩️"
-                        : "🔔"}
-                    </span>
+                    <div className="mt-0.5 flex-shrink-0">{actionIcon(n.action)}</div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold leading-snug" style={{ color: "#1E1830" }}>
                         {n.message}
@@ -145,10 +173,7 @@ export default function NotificationBell({ userEmail }: { userEmail: string }) {
                       </p>
                     </div>
                     {isUnread && (
-                      <div
-                        className="mt-1.5 h-2 w-2 flex-shrink-0 rounded-full"
-                        style={{ background: "#8070C0" }}
-                      />
+                      <div className="mt-1.5 h-2 w-2 flex-shrink-0 rounded-full" style={{ background: "#8070C0" }} />
                     )}
                   </div>
                 );

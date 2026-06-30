@@ -1,7 +1,5 @@
 "use client";
 
-import { useState } from "react";
-
 type Props = {
   billName: string;
   monthLabel: string;
@@ -10,41 +8,62 @@ type Props = {
 };
 
 export default function ConfirmModal({ billName, monthLabel, onConfirm, onCancel }: Props) {
-  const [checked, setChecked] = useState(false);
-
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center p-6"
+      style={{ background: "rgba(0,0,0,0.45)" }}
       onClick={onCancel}
     >
       <div
-        className="card w-full max-w-sm"
+        style={{
+          background: "#FFFFFF",
+          borderRadius: 28,
+          padding: "28px 24px",
+          width: "100%",
+          maxWidth: 340,
+          boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
+        }}
         onClick={(e) => e.stopPropagation()}
       >
-        <p className="text-base font-semibold text-gray-900">
-          Are you sure you&apos;ve paid {billName} for {monthLabel}?
+        <p className="text-xl font-extrabold" style={{ color: "#1E1830" }}>
+          Confirm payment
         </p>
-        <label className="mt-4 flex items-center gap-2 text-sm text-gray-700">
-          <input
-            type="checkbox"
-            checked={checked}
-            onChange={(e) => setChecked(e.target.checked)}
-            className="h-4 w-4 rounded"
-          />
-          Yes, I&apos;m sure I&apos;ve paid
-        </label>
-        <div className="mt-5 flex gap-2">
+        <p className="mt-2 text-sm font-semibold" style={{ color: "#8070C0" }}>
+          Mark <span style={{ color: "#5040A0" }}>{billName}</span> as paid for {monthLabel}?
+        </p>
+
+        <div className="mt-6 flex gap-3">
           <button
+            type="button"
             onClick={onCancel}
-            className="flex-1 rounded-pill border border-gray-200 py-2 text-sm font-medium text-gray-600"
+            style={{
+              flex: 1,
+              background: "#F0EFF8",
+              color: "#8070C0",
+              border: "none",
+              borderRadius: 999,
+              padding: "14px 0",
+              fontSize: 14,
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
           >
             Cancel
           </button>
           <button
-            disabled={!checked}
+            type="button"
             onClick={onConfirm}
-            className="flex-1 rounded-pill bg-paid-text py-2 text-sm font-medium text-white disabled:opacity-40"
-            style={{ background: checked ? "#15803D" : "#9CA3AF" }}
+            style={{
+              flex: 1,
+              background: "#5040A0",
+              color: "#FFFFFF",
+              border: "none",
+              borderRadius: 999,
+              padding: "14px 0",
+              fontSize: 14,
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
           >
             Confirm
           </button>

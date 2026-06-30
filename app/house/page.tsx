@@ -2,17 +2,23 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@supabase/supabase-js";
+import { supabase } from "@/lib/supabaseClient";
 import { AuthGuard, displayName } from "@/components/AuthGuard";
 import BottomNav from "@/components/BottomNav";
 import NotificationBell from "@/components/NotificationBell";
 import { HousekeepingTask, HousekeepingCompletion } from "@/lib/types";
 import type { User } from "@supabase/supabase-js";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+// ─── SVG Icons ────────────────────────────────────────────────────────────────
+function GearIcon({ size = 18 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
+    </svg>
+  );
+}
 
 // ─── Week / date helpers ──────────────────────────────────────────────────────
 function getCurrentWeekNumber(): number {
@@ -99,10 +105,14 @@ function TaskRow({
         border: isDone ? "none" : "2px solid #EAC0CC",
         background: isDone ? "#F0D020" : "transparent",
         display: "flex", alignItems: "center", justifyContent: "center",
-        fontSize: 14, fontWeight: 900, color: "#1C0C16",
         transition: "all 0.18s",
       }}>
-        {isDone ? "✓" : ""}
+        {isDone && (
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+            stroke="#1C0C16" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+        )}
       </div>
 
       {/* Name */}
@@ -183,9 +193,13 @@ function BacklogCard({ item, onToggle }: { item: BacklogItem; onToggle: (item: B
           border: done ? "none" : "2px solid #EAC0CC",
           background: done ? "#F0D020" : "transparent",
           display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: 13, fontWeight: 900, color: "#1C0C16",
         }}>
-          {done ? "✓" : ""}
+          {done && (
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
+              stroke="#1C0C16" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          )}
         </div>
       </div>
     </button>
@@ -325,13 +339,22 @@ function HouseInner({ user }: { user: User }) {
   const doneCount = tasks.filter(t => completions.some(c => c.task_id === t.id)).length;
 
   return (
-    <div style={{ background: "#F7C5D0", minHeight: "100vh", paddingBottom: 120, maxWidth: 480, margin: "0 auto" }}>
+    <div style={{
+      background: "#F7C5D0",
+      minHeight: "100vh",
+      paddingBottom: 120,
+      maxWidth: 480,
+      margin: "0 auto",
+    }}>
 
       {/* ── Header ── */}
       <div style={{
         background: "#E8849A",
         borderRadius: "0 0 40px 40px",
-        padding: "52px 22px 28px",
+        paddingTop: "max(52px, env(safe-area-inset-top))",
+        paddingBottom: 28,
+        paddingLeft: 22,
+        paddingRight: 22,
       }}>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 22 }}>
           <div>
@@ -348,10 +371,19 @@ function HouseInner({ user }: { user: User }) {
           <div style={{ display: "flex", gap: 9, marginTop: 4 }}>
             <NotificationBell userEmail={user.email!} />
             <button type="button" onClick={() => router.push("/house/settings")} style={{
-              width: 40, height: 40, borderRadius: "50%", border: "none",
-              background: "rgba(255,255,255,0.35)", cursor: "pointer",
-              display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17,
-            }}>⚙️</button>
+              width: 36,
+              height: 36,
+              borderRadius: "50%",
+              border: "none",
+              background: "rgba(255,255,255,0.35)",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#FFFFFF",
+            }}>
+              <GearIcon size={17} />
+            </button>
           </div>
         </div>
 
@@ -378,7 +410,7 @@ function HouseInner({ user }: { user: User }) {
             <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#F0D020", flexShrink: 0 }} />
             <div>
               <p style={{ fontSize: 15, fontWeight: 900, color: "#FFFFFF", lineHeight: 1 }}>
-                {loading ? "—" : doneCount === tasks.length && tasks.length > 0 ? "All done" : `${doneCount} / ${tasks.length}`}
+                {loading ? "—" : doneCount === tasks.length && tasks.length > 0 ? "All done!" : `${doneCount} / ${tasks.length}`}
               </p>
               <p style={{ fontSize: 10, fontWeight: 600, color: "#FFFBE8", opacity: 0.7, marginTop: 2 }}>
                 tasks done

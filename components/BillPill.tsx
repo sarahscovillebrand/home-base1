@@ -24,56 +24,94 @@ export default function BillPill({ bill, paid, monthLabel, onTogglePaid }: Props
   }
 
   function handleClick() {
+    if (!bill.tappable) return;
     if (paid) {
-      // Tapping a paid pill un-marks it immediately (undo a mistake) without
-      // the confirmation step — only marking-as-paid needs the safety check.
       onTogglePaid(bill.id, false);
       return;
     }
     setShowModal(true);
   }
 
+  const rowBg = bill.tappable
+    ? paid
+      ? "rgba(255,255,255,0.85)"
+      : "rgba(255,255,255,0.55)"
+    : "rgba(255,255,255,0.35)";
+
   return (
     <>
-      <div className="flex items-center gap-2">
-        <div
-          className="flex flex-1 items-center justify-between gap-3 rounded-pill px-4 py-3"
-          style={{
-            background: paid ? "rgba(255,255,255,0.75)" : "rgba(255,255,255,0.5)",
+      <div
+        onClick={handleClick}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
+          background: rowBg,
+          borderRadius: 18,
+          padding: "15px 18px",
+          cursor: bill.tappable ? "pointer" : "default",
+          opacity: saving ? 0.6 : 1,
+          transition: "opacity 0.15s",
+        }}
+      >
+        {/* Left: name + amount */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{
+            fontSize: 15,
+            fontWeight: 700,
             color: "#1A1040",
-          }}
-        >
-          <span className="font-bold text-sm">{bill.name}</span>
-          <span className="text-xs font-semibold" style={{ opacity: 0.55 }}>
+            textDecoration: paid ? "line-through" : "none",
+            textDecorationColor: "rgba(80,64,160,0.4)",
+            opacity: paid ? 0.6 : 1,
+          }}>
+            {bill.name}
+          </p>
+          <p style={{ fontSize: 12, fontWeight: 600, color: "#302070", opacity: 0.5, marginTop: 2 }}>
             {formatMoney(bill.amount)} · due {ordinal(bill.due_day)}
-          </span>
+          </p>
         </div>
-        {bill.pay_url && (
-          <a
-            href={bill.pay_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label={`Go pay ${bill.name}`}
-            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-sm font-bold transition-opacity hover:opacity-70"
-            style={{ background: "rgba(255,255,255,0.6)", color: "#5040A0" }}
-          >
-            ↗
-          </a>
+
+        {/* Right: check circle or autopay tag */}
+        {bill.tappable ? (
+          <div style={{
+            width: 34,
+            height: 34,
+            borderRadius: "50%",
+            flexShrink: 0,
+            background: paid ? "rgba(80,64,160,0.75)" : "rgba(80,64,160,0.15)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            transition: "background 0.18s",
+          }}>
+            {paid ? (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            ) : (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                stroke="#8070C0" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="9" />
+              </svg>
+            )}
+          </div>
+        ) : (
+          <span style={{
+            fontSize: 9,
+            fontWeight: 700,
+            letterSpacing: "0.07em",
+            textTransform: "uppercase",
+            color: "#302070",
+            opacity: 0.35,
+            flexShrink: 0,
+          }}>
+            autopay
+          </span>
         )}
-        <button
-          type="button"
-          onClick={handleClick}
-          disabled={saving}
-          aria-label={paid ? `Mark ${bill.name} unpaid` : `Mark ${bill.name} paid`}
-          className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-sm font-bold transition-colors"
-          style={{
-            background: paid ? "rgba(80,64,160,0.7)" : "rgba(255,255,255,0.6)",
-            color: paid ? "#FFFFFF" : "#8070C0",
-          }}
-        >
-          {paid ? "✓" : "○"}
-        </button>
       </div>
+
       {showModal && (
         <ConfirmModal
           billName={bill.name}
@@ -88,8 +126,7 @@ export default function BillPill({ bill, paid, monthLabel, onTogglePaid }: Props
 
 function ordinal(day: number): string {
   if (day === 0) return "every payday";
-  const j = day % 10,
-    k = day % 100;
+  const j = day % 10, k = day % 100;
   if (j === 1 && k !== 11) return `${day}st`;
   if (j === 2 && k !== 12) return `${day}nd`;
   if (j === 3 && k !== 13) return `${day}rd`;
