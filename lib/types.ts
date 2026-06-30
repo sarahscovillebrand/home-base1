@@ -41,3 +41,23 @@ export type IncomeLogRow = {
   source2_name: string | null;
   source2_amount: number;
 };
+
+export type HousekeepingTask = {
+  id: string;
+  name: string;
+  duration: string | null;
+  day_of_week: number;
+  week_number: number;
+  assigned_to: "sarah" | "hunter" | "shared";
+  sort_order: number;
+  active: boolean;
+};
+
+export type HousekeepingCompletion = {
+  id: string;
+  task_id: string;
+  completed_by_name: string;
+  completed_by_email: string;
+  completed_at: string;
+  task_date: string;
+};

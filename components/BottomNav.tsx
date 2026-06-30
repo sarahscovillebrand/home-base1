@@ -1,19 +1,29 @@
 "use client";
 
-import { useState } from "react";
+import { useRouter, usePathname } from "next/navigation";
 
 type Tab = "home" | "house" | "meals" | "vault" | "more";
 
-const TABS: { id: Tab; label: string; icon: string }[] = [
-  { id: "home",  label: "Home",  icon: "🏡" },
-  { id: "house", label: "House", icon: "🧹" },
-  { id: "meals", label: "Meals", icon: "🍽" },
-  { id: "vault", label: "Vault", icon: "🔐" },
-  { id: "more",  label: "More",  icon: "•••" },
+const TABS: { id: Tab; label: string; icon: string; href: string }[] = [
+  { id: "home",  label: "Home",  icon: "🏡", href: "/" },
+  { id: "house", label: "House", icon: "🧹", href: "/house" },
+  { id: "meals", label: "Meals", icon: "🍽", href: "/meals" },
+  { id: "vault", label: "Vault", icon: "🔐", href: "/vault" },
+  { id: "more",  label: "More",  icon: "•••", href: "/more" },
 ];
 
+function pathnameToTab(pathname: string): Tab {
+  if (pathname.startsWith("/house")) return "house";
+  if (pathname.startsWith("/meals")) return "meals";
+  if (pathname.startsWith("/vault")) return "vault";
+  if (pathname.startsWith("/more")) return "more";
+  return "home";
+}
+
 export default function BottomNav() {
-  const [active, setActive] = useState<Tab>("home");
+  const router = useRouter();
+  const pathname = usePathname();
+  const active = pathnameToTab(pathname);
 
   return (
     <nav
@@ -31,7 +41,7 @@ export default function BottomNav() {
           <button
             key={tab.id}
             type="button"
-            onClick={() => setActive(tab.id)}
+            onClick={() => router.push(tab.href)}
             className="flex flex-col items-center gap-1"
             style={{ minWidth: 56 }}
           >
