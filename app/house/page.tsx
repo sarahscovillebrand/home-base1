@@ -473,15 +473,13 @@ function HouseInner({ user }: { user: User }) {
           flex: 1,
           background: "#FFFFFF",
           borderRadius: 24,
-          padding: "16px 14px",
+          padding: "14px 12px",
           display: "flex",
           flexDirection: "column",
+          justifyContent: "center",
           gap: 10,
-          minHeight: 148,
+          minHeight: 172,
         }}>
-          <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#1C0C16", opacity: 0.35 }}>
-            Quick actions
-          </p>
           <button type="button" onClick={openCatchUp} style={{
             display: "flex", alignItems: "center", justifyContent: "space-between",
             background: "#FBE4EA", borderRadius: 14, padding: "11px 13px",
@@ -514,7 +512,7 @@ function HouseInner({ user }: { user: User }) {
         {(() => {
           const total = tasks.length;
           const done = doneCount;
-          const r = 38;
+          const r = 46;
           const circ = 2 * Math.PI * r;
           const progress = total > 0 ? (done / total) * circ : 0;
           const allDone = total > 0 && done === total;
@@ -527,21 +525,21 @@ function HouseInner({ user }: { user: User }) {
               flexDirection: "column",
               alignItems: "center",
               justifyContent: "center",
-              gap: 6,
-              minHeight: 148,
+              minHeight: 172,
+              padding: 12,
             }}>
-              <div style={{ position: "relative", width: 96, height: 96 }}>
-                <svg width="96" height="96" viewBox="0 0 96 96">
+              <div style={{ position: "relative", width: "100%", aspectRatio: "1" }}>
+                <svg width="100%" height="100%" viewBox="0 0 112 112">
                   {/* Background track */}
-                  <circle cx="48" cy="48" r={r} fill="none"
-                    stroke="rgba(232,132,154,0.15)" strokeWidth="7" />
+                  <circle cx="56" cy="56" r={r} fill="none"
+                    stroke="rgba(232,132,154,0.15)" strokeWidth="8" />
                   {/* Progress arc */}
-                  <circle cx="48" cy="48" r={r} fill="none"
-                    stroke={allDone ? "#F0D020" : "#E8849A"} strokeWidth="7"
+                  <circle cx="56" cy="56" r={r} fill="none"
+                    stroke={allDone ? "#F0D020" : "#E8849A"} strokeWidth="8"
                     strokeLinecap="round"
                     strokeDasharray={`${progress} ${circ}`}
                     strokeDashoffset="0"
-                    transform="rotate(-90 48 48)" />
+                    transform="rotate(-90 56 56)" />
                 </svg>
                 <div style={{
                   position: "absolute", inset: 0,
