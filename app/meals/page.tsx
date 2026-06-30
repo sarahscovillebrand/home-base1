@@ -39,52 +39,82 @@ const PLAN_DAYS = [
   { dow: 5, label: "Friday",    short: "Fri" },
 ];
 
-// ─── CSV Parser ───────────────────────────────────────────────────────────────
+// ─── CSV Parser (RFC 4180, handles BOM, CRLF, multi-line quoted fields) ───────
 type ParsedMealRow = { name: string; side_dish: string; instructions: string; ingredients: string[] };
 
-function parseMenuCSV(text: string): ParsedMealRow[] {
-  // Split into fields handling quoted multi-line values
-  const rows: string[][] = [];
-  let row: string[] = [];
-  let field = "";
-  let inQuotes = false;
-  for (let i = 0; i < text.length; i++) {
-    const ch = text[i];
-    const next = text[i + 1];
-    if (inQuotes) {
-      if (ch === '"' && next === '"') { field += '"'; i++; }
-      else if (ch === '"') { inQuotes = false; }
-      else { field += ch; }
-    } else {
-      if (ch === '"') { inQuotes = true; }
-      else if (ch === ',') { row.push(field); field = ""; }
-      else if (ch === '\n') { row.push(field); rows.push(row); row = []; field = ""; }
-      else if (ch === '\r') { /* skip */ }
-      else { field += ch; }
-    }
-  }
-  if (field || row.length) { row.push(field); rows.push(row); }
+function parseMenuCSV(raw: string): ParsedMealRow[] {
+  // Strip UTF-8 BOM if present
+  const text = raw.charCodeAt(0) === 0xFEFF ? raw.slice(1) : raw;
 
-  // Find header row (look for "Meal Name" in col 0)
-  const headerIdx = rows.findIndex(r => r[0]?.trim().toLowerCase().includes("meal name"));
+  const rows: string[][] = [];
+  let pos = 0;
+
+  const parseField = (): string => {
+    if (pos >= text.length) return "";
+    if (text[pos] === '"') {
+      // Quoted field
+      pos++; // skip opening quote
+      let val = "";
+      while (pos < text.length) {
+        const c = text[pos];
+        if (c === '"') {
+          if (text[pos + 1] === '"') { val += '"'; pos += 2; } // escaped quote
+          else { pos++; break; } // closing quote
+        } else {
+          // Preserve \n inside quoted fields; skip bare \r
+          if (c !== '\r') val += c;
+          pos++;
+        }
+      }
+      return val;
+    } else {
+      // Unquoted field — read until comma, \r, or \n
+      let val = "";
+      while (pos < text.length && text[pos] !== ',' && text[pos] !== '\r' && text[pos] !== '\n') {
+        val += text[pos++];
+      }
+      return val;
+    }
+  };
+
+  while (pos < text.length) {
+    // Skip blank lines
+    if (text[pos] === '\r' || text[pos] === '\n') { pos++; continue; }
+
+    const row: string[] = [];
+    row.push(parseField());
+    while (pos < text.length && text[pos] === ',') {
+      pos++; // skip comma
+      row.push(parseField());
+    }
+    // Skip row terminator
+    if (pos < text.length && text[pos] === '\r') pos++;
+    if (pos < text.length && text[pos] === '\n') pos++;
+
+    rows.push(row);
+  }
+
+  // Find header row by looking for "Meal Name" in any column of any row
+  const headerIdx = rows.findIndex(r => r.some(c => c.trim().toLowerCase().includes("meal name")));
   if (headerIdx === -1) return [];
 
   const headers = rows[headerIdx].map(h => h.trim().toLowerCase());
-  const nameCol = headers.findIndex(h => h.includes("meal name"));
-  const sideCol = headers.findIndex(h => h.includes("side"));
+  const nameCol  = headers.findIndex(h => h.includes("meal name"));
+  const sideCol  = headers.findIndex(h => h.includes("side"));
   const instrCol = headers.findIndex(h => h.includes("instruct"));
-  const ingCol  = headers.findIndex(h => h.includes("ingredient"));
+  const ingCol   = headers.findIndex(h => h.includes("ingredient"));
 
   const results: ParsedMealRow[] = [];
   for (let i = headerIdx + 1; i < rows.length; i++) {
     const r = rows[i];
-    const name = (nameCol >= 0 ? r[nameCol] : "").trim();
+    const name = (nameCol >= 0 ? r[nameCol] ?? "" : "").trim();
     if (!name) continue;
     results.push({
       name,
-      side_dish: (sideCol >= 0 ? r[sideCol] : "").trim(),
-      instructions: (instrCol >= 0 ? r[instrCol] : "").trim(),
-      ingredients: (ingCol >= 0 ? r[ingCol] : "").split("\n").map(l => l.trim()).filter(Boolean),
+      side_dish:    (sideCol  >= 0 ? r[sideCol]  ?? "" : "").trim(),
+      instructions: (instrCol >= 0 ? r[instrCol] ?? "" : "").trim(),
+      ingredients:  (ingCol   >= 0 ? r[ingCol]   ?? "" : "")
+                      .split("\n").map(l => l.trim()).filter(Boolean),
     });
   }
   return results;
@@ -448,7 +478,13 @@ function MenuTab({ meals, ingredients, onDataRefresh }: {
   const [showAdd, setShowAdd] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
+  const [importToast, setImportToast] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  function showToast(msg: string) {
+    setImportToast(msg);
+    setTimeout(() => setImportToast(null), 4000);
+  }
 
   async function handleDelete(mealId: string) {
     await supabase.from("meals").delete().eq("id", mealId);
@@ -459,38 +495,53 @@ function MenuTab({ meals, ingredients, onDataRefresh }: {
     const file = e.target.files?.[0];
     if (!file) return;
     setImporting(true);
-    const text = await file.text();
-    const rows = parseMenuCSV(text);
-    for (const row of rows) {
-      // Upsert by name — update if already exists, insert if not
-      const { data: existing } = await supabase.from("meals").select("id").eq("name", row.name).maybeSingle();
-      let mealId: string;
-      if (existing) {
-        await supabase.from("meals").update({
-          side_dish: row.side_dish || null,
-          instructions: row.instructions || null,
-        }).eq("id", existing.id);
-        mealId = existing.id;
-        // Replace ingredients
-        await supabase.from("meal_ingredients").delete().eq("meal_id", mealId);
-      } else {
-        const { data: newMeal } = await supabase.from("meals").insert({
-          name: row.name,
-          side_dish: row.side_dish || null,
-          instructions: row.instructions || null,
-        }).select("id").single();
-        mealId = newMeal!.id;
+    try {
+      const text = await file.text();
+      const rows = parseMenuCSV(text);
+      if (rows.length === 0) {
+        showToast("No meals found — check the CSV headers.");
+        setImporting(false);
+        return;
       }
-      if (row.ingredients.length > 0) {
-        await supabase.from("meal_ingredients").insert(
-          row.ingredients.map((name, i) => ({ meal_id: mealId, name, sort_order: i }))
-        );
+      let count = 0;
+      for (const row of rows) {
+        try {
+          // Check if meal with this name already exists
+          const { data: existing } = await supabase
+            .from("meals").select("id").eq("name", row.name).limit(1);
+          let mealId: string;
+          if (existing && existing.length > 0) {
+            mealId = existing[0].id;
+            await supabase.from("meals").update({
+              side_dish: row.side_dish || null,
+              instructions: row.instructions || null,
+            }).eq("id", mealId);
+            await supabase.from("meal_ingredients").delete().eq("meal_id", mealId);
+          } else {
+            const { data: newMeal, error } = await supabase.from("meals").insert({
+              name: row.name,
+              side_dish: row.side_dish || null,
+              instructions: row.instructions || null,
+            }).select("id").single();
+            if (error || !newMeal) continue;
+            mealId = newMeal.id;
+          }
+          if (row.ingredients.length > 0) {
+            await supabase.from("meal_ingredients").insert(
+              row.ingredients.map((name, i) => ({ meal_id: mealId, name, sort_order: i }))
+            );
+          }
+          count++;
+        } catch (_e) { /* skip individual failed row */ }
       }
+      showToast(`✓ ${count} of ${rows.length} meal${rows.length !== 1 ? "s" : ""} imported`);
+      onDataRefresh();
+    } catch (_err) {
+      showToast("Import failed — please try again.");
+    } finally {
+      setImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
-    setImporting(false);
-    onDataRefresh();
-    // Reset file input so same file can be re-imported
-    if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
   return (
@@ -571,6 +622,19 @@ function MenuTab({ meals, ingredients, onDataRefresh }: {
           <p style={{ fontSize: 20, fontWeight: 900, color: "#1C2010", marginBottom: 16 }}>New meal</p>
           <AddMealSheet onClose={() => setShowAdd(false)} onSaved={() => { onDataRefresh(); setShowAdd(false); }} />
         </BottomSheet>
+      )}
+
+      {/* Import toast */}
+      {importToast && (
+        <div style={{
+          position: "fixed", bottom: 100, left: "50%", transform: "translateX(-50%)",
+          background: "#1C2010", color: "#FFFFFF", borderRadius: 999,
+          padding: "12px 22px", fontSize: 14, fontWeight: 700,
+          boxShadow: "0 4px 20px rgba(0,0,0,0.25)", zIndex: 200,
+          whiteSpace: "nowrap",
+        }}>
+          {importToast}
+        </div>
       )}
     </>
   );
