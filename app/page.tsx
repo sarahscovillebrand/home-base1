@@ -11,16 +11,18 @@ import StartupRunwayCard from "@/components/StartupRunwayCard";
 import HealthChips from "@/components/HealthChips";
 import BottomNav from "@/components/BottomNav";
 import AuthGuard, { displayName } from "@/components/AuthGuard";
+import NotificationBell from "@/components/NotificationBell";
+import type { User } from "@supabase/supabase-js";
 
 export default function Dashboard() {
   return (
     <AuthGuard>
-      {(user) => <DashboardInner name={displayName(user)} />}
+      {(user) => <DashboardInner name={displayName(user)} user={user} />}
     </AuthGuard>
   );
 }
 
-function DashboardInner({ name }: { name: string }) {
+function DashboardInner({ name, user }: { name: string; user: User }) {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [bills, setBills] = useState<Bill[]>([]);
   const [payments, setPayments] = useState<BillPayment[]>([]);
@@ -59,6 +61,22 @@ function DashboardInner({ name }: { name: string }) {
       },
       { onConflict: "bill_id,period_label" }
     );
+
+    // Insert a notification so the other person sees what happened
+    const bill = bills.find((b) => b.id === billId);
+    if (bill) {
+      const action = nextPaid ? "marked_paid" : "marked_unpaid";
+      const verb = nextPaid ? "marked" : "un-marked";
+      await supabase.from("notifications").insert({
+        actor_name: name,
+        actor_email: user.email ?? "",
+        action,
+        subject: bill.name,
+        message: `${name} ${verb} ${bill.name} as ${nextPaid ? "paid ✓" : "unpaid"}`,
+        read_by: [user.email ?? ""],  // actor has already "seen" their own action
+      });
+    }
+
     await load();
   }
 
@@ -109,14 +127,7 @@ function DashboardInner({ name }: { name: string }) {
           >
             👋
           </button>
-          <button
-            type="button"
-            aria-label="Notifications"
-            className="relative flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full"
-            style={{ background: "#FFFFFF", border: "0.5px solid #EBEBEB" }}
-          >
-            🔔
-          </button>
+          <NotificationBell userEmail={user.email ?? ""} />
         </div>
 
         {/* Cards */}
