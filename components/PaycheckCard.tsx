@@ -15,8 +15,10 @@ type Props = {
 export default function PaycheckCard({ settings, bills, payments, monthLabel, onTogglePaid }: Props) {
   const letter = getCurrentPaycheckLetter();
   const label = letter === "A" ? "Home Base" : "Operations";
-  // Show all bills for this paycheck — tappable ones get check circle, others show "autopay"
-  const paycheckBills = bills.filter((b) => b.paycheck_letter === letter);
+  // Show all bills for this paycheck — tappable first, then autopay
+  const paycheckBills = bills
+    .filter((b) => b.paycheck_letter === letter)
+    .sort((a, b) => (b.tappable ? 1 : 0) - (a.tappable ? 1 : 0));
   const paidMap = new Map(payments.map((p) => [p.bill_id, p.paid]));
 
   return (
