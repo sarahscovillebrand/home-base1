@@ -8,7 +8,7 @@ import NotificationBell from "@/components/NotificationBell";
 import type { User } from "@supabase/supabase-js";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-type Meal = { id: string; name: string; instructions: string | null; created_at: string };
+type Meal = { id: string; name: string; side_dish: string | null; instructions: string | null; created_at: string };
 type Ingredient = { id: string; meal_id: string; name: string; sort_order: number };
 type MealPlan = { id: string; week_start: string; day_of_week: number; meal_id: string | null };
 type GroceryCheck = { id: string; week_start: string; ingredient_name: string };
@@ -38,6 +38,57 @@ const PLAN_DAYS = [
   { dow: 4, label: "Thursday",  short: "Thu" },
   { dow: 5, label: "Friday",    short: "Fri" },
 ];
+
+// ─── CSV Parser ───────────────────────────────────────────────────────────────
+type ParsedMealRow = { name: string; side_dish: string; instructions: string; ingredients: string[] };
+
+function parseMenuCSV(text: string): ParsedMealRow[] {
+  // Split into fields handling quoted multi-line values
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let field = "";
+  let inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    const next = text[i + 1];
+    if (inQuotes) {
+      if (ch === '"' && next === '"') { field += '"'; i++; }
+      else if (ch === '"') { inQuotes = false; }
+      else { field += ch; }
+    } else {
+      if (ch === '"') { inQuotes = true; }
+      else if (ch === ',') { row.push(field); field = ""; }
+      else if (ch === '\n') { row.push(field); rows.push(row); row = []; field = ""; }
+      else if (ch === '\r') { /* skip */ }
+      else { field += ch; }
+    }
+  }
+  if (field || row.length) { row.push(field); rows.push(row); }
+
+  // Find header row (look for "Meal Name" in col 0)
+  const headerIdx = rows.findIndex(r => r[0]?.trim().toLowerCase().includes("meal name"));
+  if (headerIdx === -1) return [];
+
+  const headers = rows[headerIdx].map(h => h.trim().toLowerCase());
+  const nameCol = headers.findIndex(h => h.includes("meal name"));
+  const sideCol = headers.findIndex(h => h.includes("side"));
+  const instrCol = headers.findIndex(h => h.includes("instruct"));
+  const ingCol  = headers.findIndex(h => h.includes("ingredient"));
+
+  const results: ParsedMealRow[] = [];
+  for (let i = headerIdx + 1; i < rows.length; i++) {
+    const r = rows[i];
+    const name = (nameCol >= 0 ? r[nameCol] : "").trim();
+    if (!name) continue;
+    results.push({
+      name,
+      side_dish: (sideCol >= 0 ? r[sideCol] : "").trim(),
+      instructions: (instrCol >= 0 ? r[instrCol] : "").trim(),
+      ingredients: (ingCol >= 0 ? r[ingCol] : "").split("\n").map(l => l.trim()).filter(Boolean),
+    });
+  }
+  return results;
+}
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 function PlusIcon({ size = 16, color = "currentColor" }: { size?: number; color?: string }) {
@@ -87,6 +138,7 @@ function BottomSheet({ onClose, children }: { onClose: () => void; children: Rea
 // ─── Add Meal Sheet ───────────────────────────────────────────────────────────
 function AddMealSheet({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
   const [name, setName] = useState("");
+  const [sideDish, setSideDish] = useState("");
   const [ingredientsText, setIngredientsText] = useState("");
   const [instructions, setInstructions] = useState("");
   const [saving, setSaving] = useState(false);
@@ -99,6 +151,7 @@ function AddMealSheet({ onClose, onSaved }: { onClose: () => void; onSaved: () =
     setSaving(true);
     const { data: meal, error } = await supabase.from("meals").insert({
       name: trimName,
+      side_dish: sideDish.trim() || null,
       instructions: instructions.trim() || null,
     }).select().single();
     if (!error && meal) {
@@ -124,6 +177,12 @@ function AddMealSheet({ onClose, onSaved }: { onClose: () => void; onSaved: () =
         ref={nameRef} value={name} onChange={e => setName(e.target.value)}
         placeholder="e.g. Ground Beef Tacos"
         style={{ ...inputBase, fontSize: 15 }}
+      />
+      <p style={labelStyle}>Side dish (optional)</p>
+      <input
+        value={sideDish} onChange={e => setSideDish(e.target.value)}
+        placeholder="e.g. Mexican rice, black beans"
+        style={{ ...inputBase, fontSize: 14 }}
       />
       <p style={labelStyle}>Ingredients (one per line)</p>
       <textarea
@@ -156,7 +215,10 @@ function MealDetailSheet({ meal, ingredients, onClose }: { meal: Meal; ingredien
   const sectionLabel: React.CSSProperties = { fontSize: 9, fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", color: "#1C2010", opacity: 0.4, marginBottom: 8, marginTop: 16 };
   return (
     <div>
-      <p style={{ fontSize: 22, fontWeight: 900, color: "#1C2010", marginBottom: 4 }}>{meal.name}</p>
+      <p style={{ fontSize: 22, fontWeight: 900, color: "#1C2010", marginBottom: 2 }}>{meal.name}</p>
+      {meal.side_dish && (
+        <p style={{ fontSize: 13, fontWeight: 600, color: "#8BA870", marginBottom: 4 }}>with {meal.side_dish}</p>
+      )}
       {meal.instructions && (
         <>
           <p style={sectionLabel}>How to make it</p>
@@ -250,7 +312,7 @@ function PlanTab({ weekStart, plans, meals, ingredients, onAssign, onRemove, onD
                     <button type="button" onClick={() => setDetailMeal(meal)} style={{ flex: 1, minWidth: 0, textAlign: "left", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
                       <p style={{ fontSize: 15, fontWeight: 700, color: "#1C2010" }}>{meal.name}</p>
                       <p style={{ fontSize: 11, fontWeight: 600, color: "#8BA870", marginTop: 2 }}>
-                        {meal.instructions ? "Tap for instructions" : mealIngredients.length > 0 ? `${mealIngredients.length} ingredient${mealIngredients.length !== 1 ? "s" : ""}` : "Tap for details"}
+                        {meal.side_dish ? `with ${meal.side_dish}` : meal.instructions ? "Tap for instructions" : "Tap for details"}
                       </p>
                     </button>
                     <button type="button" onClick={() => onRemove(day.dow)} style={{ width: 28, height: 28, borderRadius: "50%", background: "#F4F7F0", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -385,10 +447,50 @@ function MenuTab({ meals, ingredients, onDataRefresh }: {
 }) {
   const [showAdd, setShowAdd] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function handleDelete(mealId: string) {
     await supabase.from("meals").delete().eq("id", mealId);
     onDataRefresh();
+  }
+
+  async function handleCSVImport(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImporting(true);
+    const text = await file.text();
+    const rows = parseMenuCSV(text);
+    for (const row of rows) {
+      // Upsert by name — update if already exists, insert if not
+      const { data: existing } = await supabase.from("meals").select("id").eq("name", row.name).maybeSingle();
+      let mealId: string;
+      if (existing) {
+        await supabase.from("meals").update({
+          side_dish: row.side_dish || null,
+          instructions: row.instructions || null,
+        }).eq("id", existing.id);
+        mealId = existing.id;
+        // Replace ingredients
+        await supabase.from("meal_ingredients").delete().eq("meal_id", mealId);
+      } else {
+        const { data: newMeal } = await supabase.from("meals").insert({
+          name: row.name,
+          side_dish: row.side_dish || null,
+          instructions: row.instructions || null,
+        }).select("id").single();
+        mealId = newMeal!.id;
+      }
+      if (row.ingredients.length > 0) {
+        await supabase.from("meal_ingredients").insert(
+          row.ingredients.map((name, i) => ({ meal_id: mealId, name, sort_order: i }))
+        );
+      }
+    }
+    setImporting(false);
+    onDataRefresh();
+    // Reset file input so same file can be re-imported
+    if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
   return (
@@ -412,7 +514,7 @@ function MenuTab({ meals, ingredients, onDataRefresh }: {
                 <div style={{ textAlign: "left" }}>
                   <p style={{ fontSize: 15, fontWeight: 700, color: "#1C2010" }}>{meal.name}</p>
                   <p style={{ fontSize: 11, fontWeight: 600, color: "#8BA870", marginTop: 2 }}>
-                    {mealIngredients.length} ingredient{mealIngredients.length !== 1 ? "s" : ""}
+                    {meal.side_dish ? `with ${meal.side_dish}` : `${mealIngredients.length} ingredient${mealIngredients.length !== 1 ? "s" : ""}`}
                   </p>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -447,11 +549,21 @@ function MenuTab({ meals, ingredients, onDataRefresh }: {
           );
         })}
 
-        <button type="button" onClick={() => setShowAdd(true)}
-          style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: "rgba(255,255,255,0.6)", borderRadius: 20, border: "2px dashed rgba(94,139,71,0.3)", padding: "16px", cursor: "pointer" }}>
-          <PlusIcon color="#5E8B47" size={16} />
-          <span style={{ fontSize: 14, fontWeight: 700, color: "#5E8B47" }}>Add meal to menu</span>
-        </button>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button type="button" onClick={() => setShowAdd(true)}
+            style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: "rgba(255,255,255,0.6)", borderRadius: 20, border: "2px dashed rgba(94,139,71,0.3)", padding: "16px", cursor: "pointer" }}>
+            <PlusIcon color="#5E8B47" size={16} />
+            <span style={{ fontSize: 14, fontWeight: 700, color: "#5E8B47" }}>Add meal</span>
+          </button>
+          <button type="button" onClick={() => fileInputRef.current?.click()} disabled={importing}
+            style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: importing ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.6)", borderRadius: 20, border: "2px dashed rgba(94,139,71,0.3)", padding: "16px", cursor: importing ? "default" : "pointer" }}>
+            <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#5E8B47" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" />
+            </svg>
+            <span style={{ fontSize: 14, fontWeight: 700, color: "#5E8B47" }}>{importing ? "Importing…" : "Import CSV"}</span>
+          </button>
+          <input ref={fileInputRef} type="file" accept=".csv" style={{ display: "none" }} onChange={handleCSVImport} />
+        </div>
       </div>
 
       {showAdd && (
