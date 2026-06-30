@@ -37,6 +37,21 @@ function todayDateString(): string {
   return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
 }
 
+function getRelativeDayInfo(offset: number): { weekNum: number; dow: number; dateStr: string; label: string } {
+  const date = new Date();
+  date.setDate(date.getDate() + offset);
+  const dateUTC = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
+  const anchorUTC = Date.UTC(2026, 5, 28);
+  const daysDiff = Math.floor((dateUTC - anchorUTC) / (1000 * 60 * 60 * 24));
+  const weekOffset = Math.floor(daysDiff / 7);
+  const weekNum = ((weekOffset % 4) + 4) % 4 + 1;
+  const dow = date.getDay();
+  const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+  const dayNames = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+  const label = dayNames[dow];
+  return { weekNum, dow, dateStr, label };
+}
+
 const DAY_NAMES = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
 const MONTH_NAMES = ["January","February","March","April","May","June",
   "July","August","September","October","November","December"];
@@ -279,6 +294,10 @@ function HouseInner({ user }: { user: User }) {
   const [backlog, setBacklog] = useState<BacklogItem[]>([]);
   const [weather, setWeather] = useState<Weather | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sheetMode, setSheetMode] = useState<"catchup" | "ahead" | null>(null);
+  const [sheetTasks, setSheetTasks] = useState<HousekeepingTask[]>([]);
+  const [sheetLabel, setSheetLabel] = useState("");
+  const [sheetLoading, setSheetLoading] = useState(false);
 
   const load = useCallback(async () => {
     const [{ data: taskData }, { data: compData }, { data: backlogData }] = await Promise.all([
@@ -327,6 +346,32 @@ function HouseInner({ user }: { user: User }) {
       .eq("id", item.id);
     await load();
   }, [load]);
+
+  async function openCatchUp() {
+    setSheetLoading(true);
+    setSheetMode("catchup");
+    const { weekNum, dow, dateStr, label } = getRelativeDayInfo(-1);
+    const [{ data: prevTasks }, { data: prevComps }] = await Promise.all([
+      supabase.from("housekeeping_tasks").select("*").eq("week_number", weekNum).eq("day_of_week", dow).eq("active", true).order("sort_order"),
+      supabase.from("housekeeping_completions").select("task_id").eq("task_date", dateStr),
+    ]);
+    const completedIds = new Set((prevComps ?? []).map((c: { task_id: string }) => c.task_id));
+    const incomplete = (prevTasks as HousekeepingTask[] ?? []).filter(t => !completedIds.has(t.id));
+    setSheetTasks(incomplete);
+    setSheetLabel(`${label}'s unfinished tasks`);
+    setSheetLoading(false);
+  }
+
+  async function openAhead() {
+    setSheetLoading(true);
+    setSheetMode("ahead");
+    const { weekNum, dow, label } = getRelativeDayInfo(1);
+    const { data: nextTasks } = await supabase.from("housekeeping_tasks").select("*")
+      .eq("week_number", weekNum).eq("day_of_week", dow).eq("active", true).order("sort_order");
+    setSheetTasks((nextTasks as HousekeepingTask[]) ?? []);
+    setSheetLabel(`${label}'s tasks`);
+    setSheetLoading(false);
+  }
 
   const handleAddBacklog = useCallback(async (taskName: string) => {
     await supabase.from("house_backlog").insert({ name: taskName });
@@ -420,8 +465,105 @@ function HouseInner({ user }: { user: User }) {
         </div>
       </div>
 
+      {/* ── Quick action + ring cards ── */}
+      <div style={{ display: "flex", gap: 12, padding: "20px 16px 0" }}>
+
+        {/* Left: Get Caught Up / Get Ahead */}
+        <div style={{
+          flex: 1,
+          background: "#FFFFFF",
+          borderRadius: 24,
+          padding: "16px 14px",
+          display: "flex",
+          flexDirection: "column",
+          gap: 10,
+          minHeight: 148,
+        }}>
+          <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#1C0C16", opacity: 0.35 }}>
+            Quick actions
+          </p>
+          <button type="button" onClick={openCatchUp} style={{
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            background: "#FBE4EA", borderRadius: 14, padding: "11px 13px",
+            border: "none", cursor: "pointer", textAlign: "left",
+          }}>
+            <div>
+              <p style={{ fontSize: 12, fontWeight: 800, color: "#C04568" }}>Get Caught Up</p>
+              <p style={{ fontSize: 10, fontWeight: 600, color: "#C04568", opacity: 0.6, marginTop: 1 }}>Yesterday&apos;s leftovers</p>
+            </div>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C04568" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </button>
+          <button type="button" onClick={openAhead} style={{
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            background: "#F0EFF8", borderRadius: 14, padding: "11px 13px",
+            border: "none", cursor: "pointer", textAlign: "left",
+          }}>
+            <div>
+              <p style={{ fontSize: 12, fontWeight: 800, color: "#5040A0" }}>Get Ahead</p>
+              <p style={{ fontSize: 10, fontWeight: 600, color: "#5040A0", opacity: 0.6, marginTop: 1 }}>Tomorrow&apos;s tasks</p>
+            </div>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5040A0" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Right: Completion ring */}
+        {(() => {
+          const total = tasks.length;
+          const done = doneCount;
+          const r = 38;
+          const circ = 2 * Math.PI * r;
+          const progress = total > 0 ? (done / total) * circ : 0;
+          const allDone = total > 0 && done === total;
+          return (
+            <div style={{
+              width: 148,
+              flexShrink: 0,
+              background: "#FFFFFF",
+              borderRadius: 24,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 6,
+              minHeight: 148,
+            }}>
+              <div style={{ position: "relative", width: 96, height: 96 }}>
+                <svg width="96" height="96" viewBox="0 0 96 96">
+                  {/* Background track */}
+                  <circle cx="48" cy="48" r={r} fill="none"
+                    stroke="rgba(232,132,154,0.15)" strokeWidth="7" />
+                  {/* Progress arc */}
+                  <circle cx="48" cy="48" r={r} fill="none"
+                    stroke={allDone ? "#F0D020" : "#E8849A"} strokeWidth="7"
+                    strokeLinecap="round"
+                    strokeDasharray={`${progress} ${circ}`}
+                    strokeDashoffset="0"
+                    transform="rotate(-90 48 48)" />
+                </svg>
+                <div style={{
+                  position: "absolute", inset: 0,
+                  display: "flex", flexDirection: "column",
+                  alignItems: "center", justifyContent: "center",
+                }}>
+                  <p style={{ fontSize: 20, fontWeight: 900, color: "#1C0C16", lineHeight: 1 }}>
+                    {loading ? "—" : `${done}/${total}`}
+                  </p>
+                  <p style={{ fontSize: 9, fontWeight: 700, color: "#1C0C16", opacity: 0.4, marginTop: 2, letterSpacing: "0.04em" }}>
+                    {allDone ? "ALL DONE" : "DONE"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+      </div>
+
       {/* ── Tasks ── */}
-      <div style={{ padding: "24px 16px 0" }}>
+      <div style={{ padding: "20px 16px 0" }}>
         <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#1C0C16", opacity: 0.4, marginBottom: 12, paddingLeft: 4 }}>
           Today&apos;s tasks
         </p>
@@ -447,6 +589,89 @@ function HouseInner({ user }: { user: User }) {
           </div>
         )}
       </div>
+
+      {/* ── Task Preview Sheet ── */}
+      {sheetMode && (
+        <div
+          style={{
+            position: "fixed", inset: 0, zIndex: 60,
+            background: "rgba(28,12,22,0.5)",
+            display: "flex", alignItems: "flex-end",
+          }}
+          onClick={() => setSheetMode(null)}
+        >
+          <div
+            style={{
+              width: "100%", maxWidth: 480, margin: "0 auto",
+              background: "#FFFFFF",
+              borderRadius: "28px 28px 0 0",
+              padding: "24px 20px max(32px, env(safe-area-inset-bottom))",
+              maxHeight: "70vh",
+              display: "flex", flexDirection: "column",
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Handle */}
+            <div style={{ width: 36, height: 4, borderRadius: 2, background: "rgba(0,0,0,0.12)", margin: "0 auto 20px" }} />
+
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+              <div>
+                <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#1C0C16", opacity: 0.35 }}>
+                  {sheetMode === "catchup" ? "Get Caught Up" : "Get Ahead"}
+                </p>
+                <p style={{ fontSize: 20, fontWeight: 900, color: "#1C0C16", marginTop: 2 }}>{sheetLabel}</p>
+              </div>
+              <button type="button" onClick={() => setSheetMode(null)} style={{
+                width: 32, height: 32, borderRadius: "50%", border: "none",
+                background: "#F0EFF8", cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8070C0" strokeWidth="2.5" strokeLinecap="round">
+                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+
+            <div style={{ overflowY: "auto", flex: 1 }}>
+              {sheetLoading ? (
+                <p style={{ textAlign: "center", padding: "32px 0", color: "#C8C4D8", fontSize: 14 }}>Loading…</p>
+              ) : sheetTasks.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "32px 0" }}>
+                  <p style={{ fontSize: 28, marginBottom: 8 }}>
+                    {sheetMode === "catchup" ? "🎉" : "🛋️"}
+                  </p>
+                  <p style={{ fontWeight: 700, color: "#1C0C16", fontSize: 15 }}>
+                    {sheetMode === "catchup" ? "All caught up!" : "Nothing scheduled"}
+                  </p>
+                </div>
+              ) : (
+                <div style={{ background: "#F7C5D0", borderRadius: 20, overflow: "hidden" }}>
+                  {sheetTasks.map((task, i) => (
+                    <div key={task.id} style={{
+                      display: "flex", alignItems: "center", gap: 12,
+                      padding: "13px 16px",
+                      borderTop: i > 0 ? "1px solid rgba(232,132,154,0.25)" : "none",
+                    }}>
+                      <div style={{
+                        width: 26, height: 26, borderRadius: "50%", flexShrink: 0,
+                        border: "2px solid rgba(192,69,104,0.35)",
+                        background: "transparent",
+                      }} />
+                      <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: "#1C0C16" }}>{task.name}</span>
+                      {task.duration && (
+                        <span style={{
+                          fontSize: 10, fontWeight: 700, color: "#C04568",
+                          background: "#FBE4EA", borderRadius: 999, padding: "3px 9px", flexShrink: 0,
+                        }}>{task.duration}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Backlog ── */}
       <div style={{ marginTop: 24 }}>
