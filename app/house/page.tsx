@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
-import { AuthGuard, displayName } from "@/components/AuthGuard";
+import AuthGuard, { displayName } from "@/components/AuthGuard";
 import BottomNav from "@/components/BottomNav";
 import NotificationBell from "@/components/NotificationBell";
 import { HousekeepingTask, HousekeepingCompletion } from "@/lib/types";
