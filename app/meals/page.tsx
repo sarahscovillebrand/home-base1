@@ -242,7 +242,7 @@ function AddMealSheet({ onClose, onSaved }: { onClose: () => void; onSaved: () =
 
 // ─── Meal Detail Sheet ────────────────────────────────────────────────────────
 function MealDetailSheet({ meal, ingredients, onClose }: { meal: Meal; ingredients: Ingredient[]; onClose: () => void }) {
-  const [activeTab, setActiveTab] = React.useState<"instructions" | "ingredients">("instructions");
+  const [activeTab, setActiveTab] = useState<"instructions" | "ingredients">("instructions");
   return (
     <div>
       <p style={{ fontSize: 22, fontWeight: 900, color: "#1C2010", marginBottom: 2 }}>{meal.name}</p>
