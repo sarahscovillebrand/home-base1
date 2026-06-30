@@ -484,10 +484,10 @@ function MealsInner({ user }: { user: User }) {
       </div>
 
       {/* ── Tabs ── */}
-      <div style={{ display: "flex", gap: 6, margin: "18px 16px 0", background: "rgba(255,255,255,0.55)", borderRadius: 16, padding: 4 }}>
+      <div style={{ display: "flex", gap: 6, margin: "18px 16px 0", background: "rgba(255,255,255,0.55)", borderRadius: 999, padding: 4 }}>
         {(["plan", "groceries", "menu"] as const).map(tab => (
           <button key={tab} type="button" onClick={() => setActiveTab(tab)}
-            style={{ flex: 1, padding: "9px 0", borderRadius: 12, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 700, background: activeTab === tab ? "#5E8B47" : "transparent", color: activeTab === tab ? "#FFFFFF" : "#8BA870", transition: "background 0.15s, color 0.15s", textTransform: "capitalize" }}>
+            style={{ flex: 1, padding: "9px 0", borderRadius: 999, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 700, background: activeTab === tab ? "#5E8B47" : "transparent", color: activeTab === tab ? "#FFFFFF" : "#8BA870", transition: "background 0.15s, color 0.15s", textTransform: "capitalize" }}>
             {tab}
           </button>
         ))}
