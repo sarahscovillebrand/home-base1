@@ -413,6 +413,83 @@ function PlanTab({ weekStart, plans, meals, ingredients, onAssign, onRemove, onD
 }
 
 // ─── Groceries Tab ────────────────────────────────────────────────────────────
+
+// Keywords that identify spices/seasonings — amounts are irrelevant for these
+const SPICE_KEYWORDS = [
+  "powder", "salt", "pepper", "oregano", "basil", "thyme", "cumin", "paprika",
+  "chili", "seasoning", "worcestershire", "italian seasoning", "parsley", "cilantro",
+  "bay leaf", "cayenne", "red pepper flake", "onion powder", "garlic powder",
+  "cinnamon", "nutmeg", "turmeric", "coriander", "dried", "pinch",
+];
+
+function isSpiceItem(name: string): boolean {
+  const lower = name.toLowerCase();
+  return SPICE_KEYWORDS.some(k => lower.includes(k));
+}
+
+// Strip leading quantity ("1 lb", "2½ cups", "¼ tsp", etc.) to get base item name
+function baseItemName(raw: string): string {
+  return raw
+    .replace(/^[\d½¼¾⅓⅔\s\/\.\-]+\s*(lbs?|oz|ounces?|cups?|tbsps?|tablespoons?|tsps?|teaspoons?|cloves?|sticks?|packages?|pkg|cans?|jars?|bunches?|pounds?|grams?|g|kg|ml|l|liters?)\b\.?\s*/i, "")
+    .replace(/^\d+\s*[-–]\s*\d+\s*(lbs?|oz|cups?|tbsps?|tsps?)\b\.?\s*/i, "") // "1-2 cups"
+    .replace(/\s*\(.*?\)\s*/g, "")  // strip parenthetical notes
+    .trim()
+    .toLowerCase();
+}
+
+type ConsolidatedItem = {
+  key: string;          // normalized base name
+  displayName: string;  // what to show (original name for first occurrence, base name for spices)
+  checkKey: string;     // key used in grocery_checks
+  isSpice: boolean;
+  mealNames: string[];  // which meals need this
+};
+
+function buildConsolidatedList(
+  plans: MealPlan[],
+  mealMap: Map<string, Meal>,
+  ingredients: Ingredient[]
+): ConsolidatedItem[] {
+  const map = new Map<string, ConsolidatedItem>();
+  const seenMealIds = new Set<string>();
+
+  for (const day of PLAN_DAYS) {
+    const plan = plans.find(p => p.day_of_week === day.dow);
+    if (!plan?.meal_id || seenMealIds.has(plan.meal_id)) continue;
+    seenMealIds.add(plan.meal_id);
+    const meal = mealMap.get(plan.meal_id);
+    if (!meal) continue;
+
+    const items = ingredients.filter(i => i.meal_id === meal.id).sort((a, b) => a.sort_order - b.sort_order);
+    for (const item of items) {
+      const base = baseItemName(item.name);
+      const spice = isSpiceItem(item.name);
+
+      if (map.has(base)) {
+        const entry = map.get(base)!;
+        if (!entry.mealNames.includes(meal.name)) entry.mealNames.push(meal.name);
+      } else {
+        map.set(base, {
+          key: base,
+          // Spices: just show the clean base name. Everything else: show original with quantity
+          displayName: spice ? base : item.name,
+          checkKey: item.name,
+          isSpice: spice,
+          mealNames: [meal.name],
+        });
+      }
+    }
+  }
+
+  const items = Array.from(map.values());
+  // Sort: regular items first (alphabetical), spices at the bottom (alphabetical)
+  items.sort((a, b) => {
+    if (a.isSpice !== b.isSpice) return a.isSpice ? 1 : -1;
+    return a.displayName.localeCompare(b.displayName);
+  });
+  return items;
+}
+
 function GroceriesTab({ plans, meals, ingredients, checks, onToggleCheck }: {
   weekStart: string; plans: MealPlan[]; meals: Meal[]; ingredients: Ingredient[];
   checks: GroceryCheck[]; onToggleCheck: (name: string, checked: boolean) => Promise<void>;
@@ -420,22 +497,15 @@ function GroceriesTab({ plans, meals, ingredients, checks, onToggleCheck }: {
   const mealMap = new Map(meals.map(m => [m.id, m]));
   const checkedNames = new Set(checks.map(c => c.ingredient_name));
 
-  const sections: { meal: Meal; items: Ingredient[] }[] = [];
-  const seenMealIds = new Set<string>();
-  for (const day of PLAN_DAYS) {
-    const plan = plans.find(p => p.day_of_week === day.dow);
-    if (!plan?.meal_id || seenMealIds.has(plan.meal_id)) continue;
-    seenMealIds.add(plan.meal_id);
-    const meal = mealMap.get(plan.meal_id);
-    if (!meal) continue;
-    const items = ingredients.filter(i => i.meal_id === meal.id).sort((a, b) => a.sort_order - b.sort_order);
-    if (items.length > 0) sections.push({ meal, items });
-  }
+  const allItems = buildConsolidatedList(plans, mealMap, ingredients);
+  const totalItems = allItems.length;
+  const checkedCount = allItems.filter(i => checkedNames.has(i.checkKey)).length;
 
-  const totalItems = sections.reduce((n, s) => n + s.items.length, 0);
-  const checkedCount = sections.reduce((n, s) => n + s.items.filter(i => checkedNames.has(i.name)).length, 0);
+  // Split into regular + spices for sectioned display
+  const regularItems = allItems.filter(i => !i.isSpice);
+  const spiceItems = allItems.filter(i => i.isSpice);
 
-  if (sections.length === 0) {
+  if (allItems.length === 0) {
     return (
       <div style={{ textAlign: "center", padding: "48px 16px" }}>
         <p style={{ fontSize: 36, marginBottom: 10 }}>🛒</p>
@@ -445,38 +515,56 @@ function GroceriesTab({ plans, meals, ingredients, checks, onToggleCheck }: {
     );
   }
 
+  function renderItem(item: ConsolidatedItem, i: number) {
+    const inPantry = checkedNames.has(item.checkKey);
+    return (
+      <button key={item.key} type="button" onClick={() => onToggleCheck(item.checkKey, !inPantry)}
+        style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "13px 16px", background: "none", border: "none", cursor: "pointer", borderTop: i > 0 ? "1px solid rgba(94,139,71,0.08)" : "none", textAlign: "left" }}>
+        <div style={{ width: 24, height: 24, borderRadius: "50%", flexShrink: 0, border: inPantry ? "none" : "2px solid rgba(94,139,71,0.35)", background: inPantry ? "#5E8B47" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.15s" }}>
+          {inPantry && <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>}
+        </div>
+        <div style={{ flex: 1 }}>
+          <span style={{ fontSize: 14, fontWeight: 600, color: "#1C2010", textDecoration: inPantry ? "line-through" : "none", textDecorationColor: "rgba(94,139,71,0.4)", opacity: inPantry ? 0.4 : 1, transition: "opacity 0.15s" }}>
+            {item.displayName}
+          </span>
+          {item.mealNames.length > 1 && !inPantry && (
+            <p style={{ fontSize: 11, fontWeight: 600, color: "#8BA870", marginTop: 1 }}>
+              {item.mealNames.join(" · ")}
+            </p>
+          )}
+        </div>
+      </button>
+    );
+  }
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      {/* Progress */}
       <div style={{ display: "flex", alignItems: "center", gap: 10, paddingLeft: 4 }}>
-        <p style={{ fontSize: 13, fontWeight: 700, color: "#5E8B47" }}>{checkedCount} of {totalItems} in pantry</p>
+        <p style={{ fontSize: 13, fontWeight: 700, color: "#5E8B47" }}>{checkedCount} of {totalItems} grabbed</p>
         <div style={{ height: 6, flex: 1, maxWidth: 110, background: "rgba(94,139,71,0.15)", borderRadius: 999, overflow: "hidden" }}>
           <div style={{ height: "100%", borderRadius: 999, width: `${totalItems > 0 ? (checkedCount / totalItems) * 100 : 0}%`, background: "#5E8B47", transition: "width 0.3s" }} />
         </div>
       </div>
 
-      {sections.map(({ meal, items }) => (
-        <div key={meal.id}>
-          <p style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: "#8BA870", marginBottom: 8, paddingLeft: 4 }}>
-            {meal.name}
+      {/* Main items */}
+      {regularItems.length > 0 && (
+        <div style={{ background: "#FFFFFF", borderRadius: 16, overflow: "hidden" }}>
+          {regularItems.map((item, i) => renderItem(item, i))}
+        </div>
+      )}
+
+      {/* Spices section */}
+      {spiceItems.length > 0 && (
+        <div>
+          <p style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.09em", textTransform: "uppercase", color: "#8BA870", marginBottom: 8, paddingLeft: 4 }}>
+            Spices &amp; Seasonings
           </p>
-          <div style={{ background: "#FFFFFF", borderRadius: 999, overflow: "hidden" }}>
-            {items.map((item, i) => {
-              const inPantry = checkedNames.has(item.name);
-              return (
-                <button key={item.id} type="button" onClick={() => onToggleCheck(item.name, !inPantry)}
-                  style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "13px 16px", background: "none", border: "none", cursor: "pointer", borderTop: i > 0 ? "1px solid rgba(94,139,71,0.1)" : "none" }}>
-                  <div style={{ width: 24, height: 24, borderRadius: "50%", flexShrink: 0, border: inPantry ? "none" : "2px solid rgba(94,139,71,0.35)", background: inPantry ? "#5E8B47" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.15s" }}>
-                    {inPantry && <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>}
-                  </div>
-                  <span style={{ fontSize: 14, fontWeight: 600, color: "#1C2010", textDecoration: inPantry ? "line-through" : "none", textDecorationColor: "rgba(94,139,71,0.4)", opacity: inPantry ? 0.45 : 1, transition: "opacity 0.15s" }}>
-                    {item.name}
-                  </span>
-                </button>
-              );
-            })}
+          <div style={{ background: "#FFFFFF", borderRadius: 16, overflow: "hidden" }}>
+            {spiceItems.map((item, i) => renderItem(item, i))}
           </div>
         </div>
-      ))}
+      )}
     </div>
   );
 }
