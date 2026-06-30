@@ -192,7 +192,7 @@ function PlanTab({ weekStart, plans, meals, ingredients, onAssign, onRemove, onD
           const meal = plan?.meal_id ? mealMap.get(plan.meal_id) : null;
           const mealIngredients = meal ? ingredients.filter(i => i.meal_id === meal.id) : [];
           return (
-            <div key={day.dow} style={{ background: "#FFFFFF", borderRadius: 20, overflow: "hidden" }}>
+            <div key={day.dow} style={{ background: "#FFFFFF", borderRadius: 999, overflow: "hidden" }}>
               <div style={{ display: "flex", alignItems: "center", padding: "15px 16px", gap: 12 }}>
                 <div style={{ width: 38, flexShrink: 0, fontSize: 11, fontWeight: 800, color: "#5E8B47", letterSpacing: "0.04em", textTransform: "uppercase" }}>
                   {day.short}
@@ -302,7 +302,7 @@ function GroceriesTab({ plans, meals, ingredients, checks, onToggleCheck }: {
           <p style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: "#8BA870", marginBottom: 8, paddingLeft: 4 }}>
             {meal.name}
           </p>
-          <div style={{ background: "#FFFFFF", borderRadius: 20, overflow: "hidden" }}>
+          <div style={{ background: "#FFFFFF", borderRadius: 999, overflow: "hidden" }}>
             {items.map((item, i) => {
               const inPantry = checkedNames.has(item.name);
               return (
@@ -351,7 +351,7 @@ function MenuTab({ meals, ingredients, onDataRefresh }: {
           const mealIngredients = ingredients.filter(i => i.meal_id === meal.id).sort((a, b) => a.sort_order - b.sort_order);
           const isExpanded = expanded === meal.id;
           return (
-            <div key={meal.id} style={{ background: "#FFFFFF", borderRadius: 20, overflow: "hidden" }}>
+            <div key={meal.id} style={{ background: "#FFFFFF", borderRadius: 28 }}>
               <button type="button" onClick={() => setExpanded(isExpanded ? null : meal.id)}
                 style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "15px 16px", background: "none", border: "none", cursor: "pointer" }}>
                 <div style={{ textAlign: "left" }}>
