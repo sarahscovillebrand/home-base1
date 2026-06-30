@@ -130,7 +130,11 @@ export default function NotificationBell({ userEmail }: { userEmail: string }) {
                     }}
                   >
                     <span className="mt-0.5 text-base">
-                      {n.action === "marked_paid" ? "✅" : "↩️"}
+                      {n.action === "marked_paid" ? "✅"
+                        : n.action === "marked_unpaid" ? "↩️"
+                        : n.action === "task_done" ? "🧹"
+                        : n.action === "task_unchecked" ? "↩️"
+                        : "🔔"}
                     </span>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold leading-snug" style={{ color: "#1E1830" }}>
