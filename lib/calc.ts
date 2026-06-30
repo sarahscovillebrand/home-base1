@@ -58,15 +58,26 @@ export function isOkayThisPaycheck(s: Settings): boolean {
   return s.checking_balance >= committedThisPaycheck(s);
 }
 
+// Worst-case "startup runway": if Sarah earned $0, how many weeks does the
+// checking buffer cover the gap? Uses 2 paychecks/month — the real typical
+// case. (The annualized 26/yr average flatters the numbers in 10 of 12 months.)
 export function startupRunwayWeeks(s: Settings): number | "covered" {
-  const perPaycheckObligation = (s.monthly_obligations_total * 12) / 26;
-  const shortfall = perPaycheckObligation - s.hunter_paycheck;
-  if (shortfall <= 0) return "covered";
-  const paychecksOfRunway = s.checking_balance / shortfall;
-  return Math.round(paychecksOfRunway * 2 * 10) / 10;
+  const typicalMonthlyIncome = s.hunter_paycheck * 2;
+  const shortfallPerMonth = s.monthly_obligations_total - typicalMonthlyIncome;
+  if (shortfallPerMonth <= 0) return "covered";
+  const monthsOfRunway = s.checking_balance / shortfallPerMonth;
+  return Math.round(monthsOfRunway * 4.33 * 10) / 10; // months → weeks
 }
 
 export function lumpRunwayPaychecks(s: Settings): number {
   if (s.sarah_goal === 0) return 0;
   return Math.round((s.lump_amount / s.sarah_goal) * 10) / 10;
+}
+
+/** Minimum Sarah must earn per paycheck for the family to break even.
+ *  Derived from the actual monthly deficit split across 2 paychecks. */
+export function sarahBreakEvenPerPaycheck(s: Settings): number {
+  const monthlyDeficit = s.monthly_obligations_total - s.hunter_paycheck * 2;
+  if (monthlyDeficit <= 0) return 0;
+  return Math.ceil((monthlyDeficit / 2) * 100) / 100; // round up to nearest cent
 }

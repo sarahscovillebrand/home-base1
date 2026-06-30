@@ -61,7 +61,7 @@ export default function PaycheckCard({ settings, bills, payments, monthLabel, on
         )}
       </div>
       <p className="mt-3 text-xs font-semibold" style={{ color: "#302070", opacity: 0.4 }}>
-        Insurance, internet, subscriptions, and every card except Discover autopay.
+        Internet, Amazon Prime, Apple Storage, Business Software, and Renter&apos;s Insurance autopay — already counted in the committed total above.
       </p>
     </div>
   );

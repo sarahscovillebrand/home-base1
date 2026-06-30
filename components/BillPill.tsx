@@ -87,6 +87,7 @@ export default function BillPill({ bill, paid, monthLabel, onTogglePaid }: Props
 }
 
 function ordinal(day: number): string {
+  if (day === 0) return "every payday";
   const j = day % 10,
     k = day % 100;
   if (j === 1 && k !== 11) return `${day}st`;
