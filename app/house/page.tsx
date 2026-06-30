@@ -520,8 +520,7 @@ function HouseInner({ user }: { user: User }) {
           const allDone = total > 0 && done === total;
           return (
             <div style={{
-              width: 148,
-              flexShrink: 0,
+              flex: 1,
               background: "#FFFFFF",
               borderRadius: 24,
               display: "flex",
