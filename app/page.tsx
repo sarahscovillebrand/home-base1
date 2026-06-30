@@ -10,8 +10,17 @@ import RunwayCard from "@/components/RunwayCard";
 import StartupRunwayCard from "@/components/StartupRunwayCard";
 import HealthChips from "@/components/HealthChips";
 import BottomNav from "@/components/BottomNav";
+import AuthGuard, { displayName } from "@/components/AuthGuard";
 
 export default function Dashboard() {
+  return (
+    <AuthGuard>
+      {(user) => <DashboardInner name={displayName(user)} />}
+    </AuthGuard>
+  );
+}
+
+function DashboardInner({ name }: { name: string }) {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [bills, setBills] = useState<Bill[]>([]);
   const [payments, setPayments] = useState<BillPayment[]>([]);
@@ -53,13 +62,21 @@ export default function Dashboard() {
     await load();
   }
 
+  async function handleSignOut() {
+    await supabase.auth.signOut();
+  }
+
   if (loading) {
-    return <p className="text-center text-gray-400 mt-10">Loading…</p>;
+    return (
+      <div className="flex min-h-screen items-center justify-center" style={{ background: "#F7F7F7" }}>
+        <p className="text-sm font-semibold" style={{ color: "#C8C4D8" }}>Loading…</p>
+      </div>
+    );
   }
 
   if (error || !settings) {
     return (
-      <div className="card mt-10 text-center text-sm text-red-600">
+      <div className="card mt-10 text-center text-sm" style={{ color: "#B91C1C" }}>
         {error ?? "No settings row found. Did you run supabase/schema.sql?"}
       </div>
     );
@@ -81,14 +98,16 @@ export default function Dashboard() {
           >
             🏡
           </div>
-          <p className="wordmark flex-1 text-xl">Hello, Sarah!</p>
+          <p className="wordmark flex-1 text-xl">Hello, {name}!</p>
           <button
             type="button"
-            aria-label="Search"
-            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full"
+            onClick={handleSignOut}
+            aria-label="Sign out"
+            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-sm"
             style={{ background: "#FFFFFF", border: "0.5px solid #EBEBEB" }}
+            title="Sign out"
           >
-            🔍
+            👋
           </button>
           <button
             type="button"

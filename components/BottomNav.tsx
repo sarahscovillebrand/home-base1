@@ -2,14 +2,14 @@
 
 import { useState } from "react";
 
-type Tab = "home" | "budget" | "bills" | "goals" | "more";
+type Tab = "home" | "house" | "meals" | "vault" | "more";
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
-  { id: "home",   label: "Home",   icon: "🏡" },
-  { id: "budget", label: "Budget", icon: "💰" },
-  { id: "bills",  label: "Bills",  icon: "📋" },
-  { id: "goals",  label: "Goals",  icon: "🎯" },
-  { id: "more",   label: "More",   icon: "•••" },
+  { id: "home",  label: "Home",  icon: "🏡" },
+  { id: "house", label: "House", icon: "🧹" },
+  { id: "meals", label: "Meals", icon: "🍽" },
+  { id: "vault", label: "Vault", icon: "🔐" },
+  { id: "more",  label: "More",  icon: "•••" },
 ];
 
 export default function BottomNav() {
