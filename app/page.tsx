@@ -154,7 +154,7 @@ function DashboardInner({ name, user }: { name: string; user: User }) {
                 <HomeIconSVG size={20} />
               </div>
               <div>
-                <h1 className="wordmark" style={{ fontSize: 30, lineHeight: 1, color: "#1E1830" }}>
+                <h1 className="wordmark" style={{ fontSize: 38, fontWeight: 900, lineHeight: 1, letterSpacing: "-0.02em", color: "#1E1830" }}>
                   HomeBase
                 </h1>
                 <p style={{ fontSize: 13, fontWeight: 600, color: "#8070C0", marginTop: 2 }}>
