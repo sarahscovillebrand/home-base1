@@ -19,31 +19,35 @@ export default function PaycheckCard({ settings, bills, payments, monthLabel, on
   const paidMap = new Map(payments.map((p) => [p.bill_id, p.paid]));
 
   return (
-    <div className="card mt-4">
-      <div className="flex items-center justify-between">
+    <div className="card" style={{ background: "#C8C0E8" }}>
+      <div className="flex items-start justify-between">
         <div>
-          <p className="text-sm text-gray-500">This paycheck</p>
-          <p className="text-lg font-semibold" style={{ color: "#5B53D6" }}>
+          <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "#302070", opacity: 0.6 }}>
+            This paycheck
+          </p>
+          <p className="mt-0.5 text-base font-extrabold" style={{ color: "#1A1040" }}>
             Paycheck {letter} · {label}
           </p>
         </div>
         <div className="text-right">
-          <p className="text-sm text-gray-500">Left after bills</p>
+          <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "#302070", opacity: 0.6 }}>
+            Left after bills
+          </p>
           <p
-            className="text-lg font-semibold"
-            style={{ color: leftAfterBills(settings) < 0 ? "#B91C1C" : "#7C8A1E" }}
+            className="num-display mt-0.5 text-xl"
+            style={{ color: leftAfterBills(settings) < 0 ? "#B91C1C" : "#1A1040" }}
           >
             {formatMoney(leftAfterBills(settings))}
           </p>
         </div>
       </div>
-      <p className="mt-1 text-xs text-gray-400">
+      <p className="mt-1 text-xs font-semibold" style={{ color: "#302070", opacity: 0.5 }}>
         Committed: {formatMoney(committedThisPaycheck(settings))} of {formatMoney(settings.hunter_paycheck)}
       </p>
 
       <div className="mt-4 flex flex-col gap-2">
         {tappable.length === 0 ? (
-          <p className="text-sm text-gray-400">No tap-to-confirm bills on this paycheck.</p>
+          <p className="text-sm" style={{ color: "#302070", opacity: 0.5 }}>No tap-to-confirm bills on this paycheck.</p>
         ) : (
           tappable.map((bill) => (
             <BillPill
@@ -56,8 +60,8 @@ export default function PaycheckCard({ settings, bills, payments, monthLabel, on
           ))
         )}
       </div>
-      <p className="mt-3 text-xs text-gray-400">
-        Everything else (insurance, internet, subscriptions, and every card except Discover) autopays — nothing to tap.
+      <p className="mt-3 text-xs font-semibold" style={{ color: "#302070", opacity: 0.4 }}>
+        Insurance, internet, subscriptions, and every card except Discover autopay.
       </p>
     </div>
   );

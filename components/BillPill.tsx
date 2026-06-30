@@ -39,12 +39,12 @@ export default function BillPill({ bill, paid, monthLabel, onTogglePaid }: Props
         <div
           className="flex flex-1 items-center justify-between gap-3 rounded-pill px-4 py-3"
           style={{
-            background: paid ? "#EAF2C2" : "#EDEBFB",
-            color: paid ? "#7C8A1E" : "#5B53D6",
+            background: paid ? "rgba(255,255,255,0.75)" : "rgba(255,255,255,0.5)",
+            color: "#1A1040",
           }}
         >
-          <span className="font-medium">{bill.name}</span>
-          <span className="text-sm opacity-80">
+          <span className="font-bold text-sm">{bill.name}</span>
+          <span className="text-xs font-semibold" style={{ opacity: 0.55 }}>
             {formatMoney(bill.amount)} · due {ordinal(bill.due_day)}
           </span>
         </div>
@@ -54,8 +54,8 @@ export default function BillPill({ bill, paid, monthLabel, onTogglePaid }: Props
             target="_blank"
             rel="noopener noreferrer"
             aria-label={`Go pay ${bill.name}`}
-            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border text-base"
-            style={{ borderColor: "#DEF453", color: "#5B53D6" }}
+            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-sm font-bold transition-opacity hover:opacity-70"
+            style={{ background: "rgba(255,255,255,0.6)", color: "#5040A0" }}
           >
             ↗
           </a>
@@ -65,11 +65,10 @@ export default function BillPill({ bill, paid, monthLabel, onTogglePaid }: Props
           onClick={handleClick}
           disabled={saving}
           aria-label={paid ? `Mark ${bill.name} unpaid` : `Mark ${bill.name} paid`}
-          className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border text-base transition-colors"
+          className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-sm font-bold transition-colors"
           style={{
-            borderColor: "#DEF453",
-            background: paid ? "#7C8A1E" : "#FFFFFF",
-            color: paid ? "#FFFFFF" : "#9D96EE",
+            background: paid ? "rgba(80,64,160,0.7)" : "rgba(255,255,255,0.6)",
+            color: paid ? "#FFFFFF" : "#8070C0",
           }}
         >
           {paid ? "✓" : "○"}

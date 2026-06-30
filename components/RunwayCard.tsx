@@ -15,31 +15,25 @@ export default function RunwayCard({
   const pct = settings.sarah_goal > 0 ? actual / settings.sarah_goal : 0;
 
   return (
-    <div className="card mt-4">
-      <p className="text-sm text-gray-500">Sarah&apos;s runway goal</p>
-      <div className="mt-2 flex items-baseline gap-2">
-        <p className="text-2xl font-semibold text-gray-900">{formatMoney(actual)}</p>
-        <p className="text-sm text-gray-400">of {formatMoney(settings.sarah_goal)} goal</p>
-      </div>
-      <p
-        className="mt-1 text-sm font-medium"
-        style={{ color: diff >= 0 ? "#15803D" : "#B91C1C" }}
-      >
-        {diff >= 0 ? `+${formatMoney(diff)} ahead` : `${formatMoney(diff)} to go`}
+    <div className="card" style={{ background: "#F8DFC0" }}>
+      <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "#7A4010", opacity: 0.6 }}>
+        Sarah&apos;s runway
       </p>
-      <div className="mt-3 h-2 w-full rounded-pill bg-gray-100">
+      <p className="num-display mt-1 text-2xl" style={{ color: "#1E1830" }}>
+        {formatMoney(actual)}
+      </p>
+      <p className="text-xs font-semibold" style={{ color: "#7A4010", opacity: 0.6 }}>
+        of {formatMoney(settings.sarah_goal)}
+      </p>
+      <div className="mt-3 h-2 w-full rounded-pill" style={{ background: "rgba(0,0,0,0.08)" }}>
         <div
           className="h-2 rounded-pill"
-          style={{ width: `${Math.min(pct * 100, 100)}%`, background: "#1D4ED8" }}
+          style={{ width: `${Math.min(pct * 100, 100)}%`, background: "#B06020" }}
         />
       </div>
-
-      <div className="mt-4 border-t border-gray-100 pt-3">
-        <p className="text-xs text-gray-500">If a lump payment of {formatMoney(settings.lump_amount)} comes in:</p>
-        <p className="text-sm font-medium text-gray-900">
-          That buys {lumpRunwayPaychecks(settings)} paychecks of runway
-        </p>
-      </div>
+      <p className="mt-1.5 text-xs font-bold" style={{ color: "#7A4010", opacity: 0.5 }}>
+        {Math.round(pct * 100)}% to goal
+      </p>
     </div>
   );
 }

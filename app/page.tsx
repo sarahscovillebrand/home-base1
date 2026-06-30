@@ -9,6 +9,7 @@ import PaycheckCard from "@/components/PaycheckCard";
 import RunwayCard from "@/components/RunwayCard";
 import StartupRunwayCard from "@/components/StartupRunwayCard";
 import HealthChips from "@/components/HealthChips";
+import BottomNav from "@/components/BottomNav";
 
 export default function Dashboard() {
   const [settings, setSettings] = useState<Settings | null>(null);
@@ -70,27 +71,58 @@ export default function Dashboard() {
   });
 
   return (
-    <main>
-      <h1 className="wordmark text-2xl">Homebase</h1>
-      <p className="text-sm text-gray-400">Pay period starting {periodLabel}</p>
+    <>
+      <main className="pb-28">
+        {/* Header */}
+        <div className="flex items-center gap-3 px-1 pb-4">
+          <div
+            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-lg"
+            style={{ background: "#EDE8F8" }}
+          >
+            🏡
+          </div>
+          <p className="wordmark flex-1 text-xl">Hello, Sarah!</p>
+          <button
+            type="button"
+            aria-label="Search"
+            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full"
+            style={{ background: "#FFFFFF", border: "0.5px solid #EBEBEB" }}
+          >
+            🔍
+          </button>
+          <button
+            type="button"
+            aria-label="Notifications"
+            className="relative flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full"
+            style={{ background: "#FFFFFF", border: "0.5px solid #EBEBEB" }}
+          >
+            🔔
+          </button>
+        </div>
 
-      <div className="mt-4">
-        <StatusHero settings={settings} />
-      </div>
-      <PaycheckCard
-        settings={settings}
-        bills={bills}
-        payments={payments}
-        monthLabel={monthLabel}
-        onTogglePaid={handleTogglePaid}
-      />
-      <RunwayCard settings={settings} latestIncome={latestIncome} />
-      <StartupRunwayCard settings={settings} />
-      <HealthChips settings={settings} />
+        {/* Cards */}
+        <div className="flex flex-col gap-3">
+          <StatusHero settings={settings} />
+          <PaycheckCard
+            settings={settings}
+            bills={bills}
+            payments={payments}
+            monthLabel={monthLabel}
+            onTogglePaid={handleTogglePaid}
+          />
+          <div className="grid grid-cols-2 gap-3">
+            <RunwayCard settings={settings} latestIncome={latestIncome} />
+            <HealthChips settings={settings} />
+          </div>
+          <StartupRunwayCard settings={settings} />
+        </div>
 
-      <p className="mt-6 text-center text-xs text-gray-300">
-        Tap a bill once it's paid — you'll be asked to confirm first.
-      </p>
-    </main>
+        <p className="mt-5 text-center text-xs" style={{ color: "#C8C4D8" }}>
+          Tap a bill once it&apos;s paid — you&apos;ll be asked to confirm first.
+        </p>
+      </main>
+
+      <BottomNav />
+    </>
   );
 }

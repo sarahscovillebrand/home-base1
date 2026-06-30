@@ -1,26 +1,26 @@
 import { Settings } from "@/lib/types";
 
-function Chip({ label, ok, value }: { label: string; ok: boolean; value: string }) {
+function Chip({ label, ok }: { label: string; ok: boolean }) {
   return (
-    <div
-      className="flex items-center justify-between rounded-pill px-4 py-2 text-sm"
-      style={{ background: ok ? "#EAF2C2" : "#FDE2E1", color: ok ? "#7C8A1E" : "#B91C1C" }}
-    >
-      <span className="font-medium">{label}</span>
-      <span>{value}</span>
-    </div>
+    <p className="text-xs font-bold" style={{ color: "#1A5040" }}>
+      {ok ? "✓" : "✗"} {label}
+    </p>
   );
 }
 
 export default function HealthChips({ settings }: { settings: Settings }) {
   return (
-    <div className="mt-4 flex flex-col gap-2">
-      <Chip label="New credit card debt" ok={!settings.new_cc_debt} value={settings.new_cc_debt ? "Yes" : "No"} />
-      <Chip
-        label="All minimums covered"
-        ok={settings.all_minimums_covered}
-        value={settings.all_minimums_covered ? "Yes" : "No"}
-      />
+    <div className="card flex flex-col justify-between" style={{ background: "#B8E8D4" }}>
+      <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "#1A5040", opacity: 0.6 }}>
+        Health check
+      </p>
+      <div className="mt-3 flex flex-col gap-2">
+        <Chip label="No new debt" ok={!settings.new_cc_debt} />
+        <Chip label="Minimums covered" ok={settings.all_minimums_covered} />
+      </div>
+      <p className="mt-4 text-xs font-bold" style={{ color: "#1A5040", opacity: 0.5 }}>
+        See details →
+      </p>
     </div>
   );
 }
